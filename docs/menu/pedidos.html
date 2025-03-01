@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPedidos - Tus Pedidos</title>
+    <link rel="stylesheet" href="pedidos.css">
+    <link rel="icon" type="imagen/" sizes="32x32" href="imagenes/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-buttons">   
+            </div>
+        <div class="header-container">
+            <button class="back-btn" onclick="volverAInicio()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2>Tus pedidos</h2>
+        </div>
+        <div class="nav-buttons">
+            <a href="../principal/Perfil.html" class="nav-button nav-active" title="Mi Perfil">
+                <div class="icon-container">
+                    <i class="fas fa-user"></i>
+                </div></a>
+                <a href="../menu/menu.html" class="nav-button" title="menu">
+                    <div class="icon-container" onclick="volverAInicio()">
+                        <i class="fas fa-home"></i>
+                    </div>
+                </a>
+                <a href="#" class="nav-button" id="cart-btn" title="Carrito" onclick="openCart()">
+                    <div class="icon-container">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-badge" id="cart-count">0</span>
+                    </div>
+                </a>
+            </div>
+    </header>
+
+    <main>
+        <section class="pedidos-section">
+            <h2>Pedidos por retirar</h2>
+            <div class="pedidos-container" id="pedidos-pendientes">
+                <!-- Los pedidos pendientes se cargarán aquí -->
+            </div>
+        </section>
+
+        <section class="pedidos-section">
+            <h2>Pedidos expirados</h2>
+            <div class="pedidos-container" id="pedidos-expirados">
+                <!-- Los pedidos expirados se cargarán aquí -->
+            </div>
+        </section>
+
+        <div id="toast" class="toast">Mensaje de notificación</div>
+    </main>
+
+    <!-- Modal del carrito -->
+    <div class="modal" id="cart-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Tu Carrito</h3>
+                <button class="close-btn" onclick="closeCart()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="cart-items" class="cart-items-container">
+                    <!-- Los items del carrito se cargarán aquí -->
+                </div>
+                <div class="cart-summary">
+                    <div class="cart-total">
+                        <span>Total:</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                </div>
+                <div class="payment-method">
+                    <h4>Método de pago:</h4>
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="visa" checked>
+                            <span class="payment-label"><i class="fab fa-cc-visa"></i> Tarjeta Visa</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="efectivo">
+                            <span class="payment-label"><i class="fas fa-money-bill-wave"></i> Efectivo</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="checkout-btn" onclick="checkout()">Hacer Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="pedidos.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="perfil.css">
+    <title>UTPedidos - Mi Perfil</title>
+    <link rel="icon" type="imagen/" sizes="32x32" href="imagenes/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo-container">
+            <img src="../imagenes/logo.png" alt="UTPedidos Logo" class="logo">
+            <h1 id="welcome-text">Bienvenido, nombre de la persona</h1>
+        </div>
+        <div class="nav-buttons">
+            <a href="../menu/menu.html" class="nav-button" title="menu">
+                <div class="icon-container" onclick="volverAInicio()">
+                    <i class="fas fa-home"></i>
+                </div>
+            </a>
+            <a href="../menu/pedidos.html" class="nav-button" title="Mis Pedidos">
+                <div class="icon-container">
+                    <i class="fas fa-bag-shopping"></i>
+                </div>
+            </a>
+            <a href="#" class="nav-button" id="cart-btn" title="Carrito" onclick="openCart()">
+                <div class="icon-container">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </div>
+            </a>
+        </div>
+    </header>
+
+    <div class="separator"></div>
+    <div class="back-button" onclick="volverAInicio()">
+        <i class="fas fa-arrow-left"></i> Volver a cafeterías
+    </div>
+
+    <main>
+        <div class="profile-container">
+            <div class="profile-header">
+                <div class="profile-avatar" id="avatar-initial">
+                    J
+                </div>
+                <div class="profile-info">
+                    <h2 id="profile-name"></h2>
+                    <p id="profile-email"></p>
+                </div>
+            </div>
+            
+            <form id="profile-form" class="profile-form">
+                <div class="form-group">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" id="nombre" name="nombre" placeholder="Tu nombre">
+                </div>
+                
+                <div class="form-group">
+                    <label for="apellido">Apellido</label>
+                    <input type="text" id="apellido" name="apellido" placeholder="Tu apellido">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Correo electrónico</label>
+                    <input type="email" id="email" name="email" placeholder="tu.correo@utp.ac.pa">
+                </div>
+                
+                <div class="form-group">
+                    <label for="telefono">Teléfono</label>
+                    <input type="tel" id="telefono" name="telefono" placeholder="6XXX-XXXX">
+                </div>
+                
+                <div class="form-group">
+                    <label for="facultad">Facultad</label>
+                    <input type="text" id="facultad" name="facultad" placeholder="Tu facultad">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edificio">Edificio habitual</label>
+                    <input type="text" id="edificio" name="edificio" placeholder="Edificio donde sueles estar">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="logout-btn">Cerrar sesión</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+            
+            <div class="order-history">
+                <h3>Historial de pedidos recientes</h3>
+                <div id="orders-container">
+                    <!-- Los pedidos se cargarán dinámicamente aquí -->
+                </div>
+            </div>
+        </div>
+            <!-- Toast para notificaciones -->
+    <div id="toast" class="toast"></div>
+    <!-- Modal del carrito -->
+        <div class="modal" id="cart-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                    <h3>Tu Carrito</h3>
+                    <samp class="close-btn" onclick="closeCart()">&times;</samp>
+                </div>
+            <div class="modal-body">
+            
+                <div id="cart-items" class="cart-items-container">
+                        <!-- Los items del carrito se cargarán aquí -->
+                </div>
+                <div class="cart-summary">
+                    <div class="cart-total">
+                        <span>Total:</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                </div>
+                <div class="payment-method">
+                    <h4>Método de pago:</h4>
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="visa" checked>
+                            <span class="payment-label"><i class="fab fa-cc-visa"></i> Tarjeta Visa</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="efectivo">
+                            <span class="payment-label"><i class="fas fa-money-bill-wave"></i> Efectivo</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="checkout-btn" onclick="checkout()">Hacer Pedido</button>
+            </div>
+            </div>
+    </main>
+
+    <script src="perfil.js"></script>
+</body>
+</html>

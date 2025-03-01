@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="menu-cafeteria1.css">
+    <title>UTPedidos - Menú Cafetería #1</title>
+    <link rel="icon" type="imagen/" sizes="32x32" href="imagenes/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="cafeteria1-theme">
+    <header class="navbar">
+        <div class="logo-container">
+            <img src="../imagenes/logo.png" alt="UTPedidos Logo" class="logo">
+            <h1 id="welcome-text">Bienvenido, nombre de la persona</h1>
+        </div>
+        <div class="nav-buttons">
+            <a href="../principal/Perfil.html" class="nav-button" title="Mi Perfil">
+                <div class="icon-container">
+                    <i class="fas fa-user"></i>
+                </div>
+            </a>
+            <a href="../menu/pedidos.html" class="nav-button" title="Mis Pedidos">
+                <div class="icon-container">
+                    <i class="fas fa-bag-shopping"></i>
+                </div>
+            </a>
+            <a href="#" class="nav-button" id="cart-btn" title="Carrito" onclick="openCart()">
+                <div class="icon-container">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </div>
+            </a>
+        </div>
+    </header>
+
+    <div class="separator"></div>
+    
+    <div class="back-button" onclick="volverAInicio()">
+        <i class="fas fa-arrow-left"></i> Volver a cafeterías
+    </div>
+
+    <main>
+        <div class="cafeteria-header">
+            <h2>CAFETERÍA #1 - Edificio No. 1</h2>
+            <p class="cafeteria-description">Disfruta de nuestro variado menú con opciones para desayuno y almuerzo. ¡Ordena ahora!.</p>
+        </div>
+        
+        <div class="menu-container">
+            <div class="menu-category">
+                <h3>Desayunos</h3>
+                
+                <div class="menu-items">
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/desayuno1.png" alt="Desayuno Panameño">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Desayuno Panameño</h4>
+                            <p>Huevos revueltos, salchicha, hojaldres y café.</p>
+                            <div class="price-add">
+                                <span class="price">$1.50</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Desayuno Panameño', 1.50, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/desayuno2.png" alt="Sandwich de Jamón y Queso">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Sandwich de Jamón y Queso</h4>
+                            <p>Pan integral, jamón, queso y vegetales.</p>
+                            <div class="price-add">
+                                <span class="price">$0.75</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Sandwich de Jamón y Queso', 0.75, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/desayuno3.png" alt="Desayuno Panameño">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Bowl de Avena y Frutas</h4>
+                            <p>Avena cocida con leche o agua, acompañada de fresas, banano, miel y frutos secos.</p>
+                            <div class="price-add">
+                                <span class="price">$1.50</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Bowl de Avena y Frutas', 1.50, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="menu-category">
+                <h3>Almuerzos</h3>
+                
+                <div class="menu-items">
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/almuerzo1.png" alt="Arroz con Pollo">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Arroz con Pollo</h4>
+                            <p>Arroz con pollo desmenuzado, acompañado de ensalada y plátanos fritos.</p>
+                            <div class="price-add">
+                                <span class="price">$1.25</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Arroz con Pollo', 1.25, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/almuerzo2.png" alt="Bistec Encebollado">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Bistec Encebollado</h4>
+                            <p>Carne de res en salsa con cebolla, arroz, frijoles y ensalada.</p>
+                            <div class="price-add">
+                                <span class="price">$1.00</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Bistec Encebollado', 1.00, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/almuerzo3.png" alt="Bistec Encebollado">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Bistec Encebollado</h4>
+                            <p>Carne de res con salsa y cebolla, servida con arroz y una guarnición adicional.</p>
+                            <div class="price-add">
+                                <span class="price">$1.50</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Bistec Encebollado Premium', 1.50, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="menu-category">
+                <h3>Cena</h3>
+                
+                <div class="menu-items">
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/cena.png" alt="Pure con Pollo">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Pure con Pollo</h4>
+                            <p>Parece ser pollo empanizado acompañado de una pure en forma de espiral.</p>
+                            <div class="price-add">
+                                <span class="price">$1.25</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Pure con Pollo', 1.25, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/cena2.png" alt="Arroz con frijoles y carne">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Arroz con frijoles y carne</h4>
+                            <p>Es un plato de arroz blanco, frijoles negros, plátanos fritos y carne.</p>
+                            <div class="price-add">
+                                <span class="price">$1.50</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Arroz con frijoles y carne', 1.50, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-item-image">
+                            <img src="../imagenes/cafeteria1/cena3.png" alt="Espagueti">
+                        </div>
+                        <div class="menu-item-details">
+                            <h4>Espagueti</h4>
+                            <p>Parece ser un plato de espagueti con salsa roja y queso rallado.</p>
+                            <div class="price-add">
+                                <span class="price">$1.00</span>
+                                <button class="add-to-cart-btn" onclick="addToCart( event,'Espagueti', 1.00, 'Cafetería #1')"><i class="fas fa-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast para notificaciones -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Modal del carrito -->
+
+    <div class="modal" id="cart-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Tu Carrito</h3>
+                <samp class="close-btn" onclick="closeCart()">&times;</samp>
+            </div>
+            <div class="modal-body">
+                <div id="cart-items" class="cart-items-container">
+                    <!-- Los items del carrito se cargarán aquí -->
+                </div>
+                <div class="cart-summary">
+                    <div class="cart-total">
+                        <span>Total:</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                </div>
+                <div class="payment-method">
+                    <h4>Método de pago:</h4>
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="visa" checked>
+                            <span class="payment-label"><i class="fab fa-cc-visa"></i> Tarjeta Visa</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="efectivo">
+                            <span class="payment-label"><i class="fas fa-money-bill-wave"></i> Efectivo</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="checkout-btn" onclick="checkout()">Hacer Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="menu-cafeteria1.js"></script>
+</body>
+</html>

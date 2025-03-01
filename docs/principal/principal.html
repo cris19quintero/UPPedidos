@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="imagen/" sizes="32x32" href="../imagenes/logo.png">
+    <link rel="stylesheet" href="principal.css">
+    <title>UTPedidos - Página Principal</title>
+</head>
+<body>
+    <div class="container">
+        <!-- Notificación de inicio de sesión exitoso -->
+        <div id="login-notification" class="notification success">
+            Inicio de sesión exitoso. ¡Bienvenido a UTPedidos!
+        </div>
+
+        <header>
+            <div class="welcome-section">
+                <h1>¡Bienvenido!</h1>
+            </div>
+            <div class="user-section">
+                <span id="userName">Nombre de persona</span>
+            </div>
+        </header>
+
+        <div class="food-gallery">
+            <div class="food-item">
+                <img src="../imagenes/desayuno.png" alt="Desayuno tradicional">
+            </div>
+            <div class="food-item">
+                <img src="../imagenes/almuerzo.png" alt="Almuerzo saludable">
+            </div>
+            <div class="food-item">
+                <img src="../imagenes/cena.png" alt="Cena equilibrada">
+            </div>
+        </div>
+
+        <section class="schedules">
+            <h2>Horarios disponibles</h2>
+            
+            <div class="schedule-container">
+                <div class="meal-schedule">
+                    <h3>Desayuno</h3>
+                    <div class="time-block">
+                        <p>7:00 am</p>
+                        <p>-</p>
+                        <p>9:30 am</p>
+                    </div>
+                </div>
+                
+                <div class="meal-schedule">
+                    <h3>Almuerzo</h3>
+                    <div class="time-block">
+                        <p>11:45 am</p>
+                        <p>-</p>
+                        <p>1:45 pm</p>
+                    </div>
+                </div>
+                
+                <div class="meal-schedule">
+                    <h3>Cena</h3>
+                    <div class="time-block">
+                        <p>4:30 pm</p>
+                        <p>-</p>
+                        <p>7:00 pm</p>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="continue-btn">Continuar</button>
+        </section>
+    </div>
+
+    <script src="principal.js"></script>
+</body>
+</html>
