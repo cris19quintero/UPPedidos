@@ -1,0 +1,23 @@
+    {
+    "cafeteria": {
+        "id": 1,
+        "nombre": "Cafetería Edificio 1",
+        "direccion": "Edificio 1"
+    },
+    "productos": [
+        {
+        "id_producto": 1,
+        "nombre": "Desayuno Panameño",
+        "descripcion": "Huevos, tortilla, queso, café",
+        "precio": 4.50,
+        "horario": "Desayuno"
+        },
+        {
+        "id_producto": 4,
+        "nombre": "Pollo Guisado con Arroz",
+        "descripcion": "Pollo guisado, arroz, ensalada",
+        "precio": 5.50,
+        "horario": "Almuerzo"
+        }
+    ]
+    }

@@ -588,3 +588,4 @@ window.addEventListener('load', function() {
 function iralPerfil(){
     window.location.href='../principal/perfil.html'
 }
+

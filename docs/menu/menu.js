@@ -1,406 +1,295 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Obtener nombre de usuario del almacenamiento local
-    const email = localStorage.getItem('utpedidos_email') || sessionStorage.getItem('utpedidos_email');
-    if (email) {
-        // Extraer el nombre de usuario del correo (parte antes del @)
-        const userName = email.split('@')[0];
-        // Capitalizar la primera letra y reemplazar puntos por espacios
-        const formattedName = userName
-            .split('.')
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ');
-        // Actualizar el texto de bienvenida
-        document.getElementById('welcome-text').textContent = 'Bienvenido, ' + formattedName;
+// --- Configuración de API ---
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// --- Cliente API ---
+async function apiGet(endpoint) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, { credentials: 'include' });
+    if (!response.ok) throw new Error('Error en la petición');
+    return response.json();
+}
+
+async function apiPost(endpoint, data) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error('Error en la petición');
+    return response.json();
+}
+
+// --- Datos locales de fallback ---
+const cafeteriaDataFallback = [
+    {
+        id_cafeteria: 1,
+        title: 'Cafetería Edificio 1',
+        description: 'Menú disponible',
+        categories: [
+            {
+                nombre: 'Desayunos',
+                productos: [
+                    { id_producto: 1, nombre: 'Desayuno Panameño', precio: 4.50, descripcion: 'Huevos, tortilla, queso, café', imagen: 'default-food.jpg' }
+                ]
+            },
+            {
+                nombre: 'Almuerzos',
+                productos: [
+                    { id_producto: 2, nombre: 'Pollo Guisado', precio: 5.50, descripcion: 'Pollo guisado, arroz, ensalada', imagen: 'default-food.jpg' }
+                ]
+            }
+        ]
     }
-    
-    // Agregar efecto de hover 3D a las cafeterías
-    const cafeterias = document.querySelectorAll('.cafeteria');
-    cafeterias.forEach(cafeteria => {
-        cafeteria.addEventListener('mousemove', function(e) {
-            const rect = cafeteria.getBoundingClientRect();
-            const x = e.clientX - rect.left; // Posición X del mouse dentro del elemento
-            const y = e.clientY - rect.top;  // Posición Y del mouse dentro del elemento
-            
-            // Calcular rotación basada en la posición del cursor
+];
+
+// --- Variables globales ---
+let cartItems = [];
+let currentCafeteria = null;
+
+// --- Inicialización ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadUserData();
+    loadCartFromStorage();
+    updateCartCount();
+
+    document.getElementById('cart-btn').addEventListener('click', openCart);
+    document.getElementById('cart-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeCart();
+    });
+
+    // Animaciones tarjetas cafetería
+    const cards = document.querySelectorAll('.cafeteria-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
-            const maxRotation = 10;
-            const rotateY = maxRotation * (x - centerX) / centerX;
-            const rotateX = -maxRotation * (y - centerY) / centerY;
-            
-            // Aplicar transformación
-            cafeteria.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px)`;
+            const rotateX = (y - centerY) / centerY * -10;
+            const rotateY = (x - centerX) / centerX * 10;
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
         });
-        
-        cafeteria.addEventListener('mouseleave', function() {
-            cafeteria.style.transition = 'transform 0.5s ease';
-            cafeteria.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
-            setTimeout(() => {
-                cafeteria.style.transition = '';
-            }, 500);
+        card.addEventListener('mouseleave', () => {
+            card.style.transition = 'transform 0.5s ease';
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+            setTimeout(() => card.style.transition = '', 500);
         });
-    });
-    
-    // Cargar carrito desde localStorage
-    updateCartCount();
-    
-    // Agregar event listener al botón del carrito
-    document.querySelector('.nav-button[title="Carrito"]').addEventListener('click', function(e) {
-        e.preventDefault();
-        openCart();
     });
 });
 
-// Función para cambiar entre cafeterías
-function cambiarCafeteria(cafeteriaId) {
-    // Implementación de la función de cambio de cafetería (si aplica)
-}
-
-// Función para volver a la página de selección de cafeterías
-function volverAInicio() {
-    window.location.href = 'menu.html';
-}
-
-// Función para navegar a diferentes menús
-function navigateTo(url) {
-    document.body.classList.add('page-exit');
-    setTimeout(() => {
-        window.location.href = url;
-    }, 300);
-}
-
-/* === Función mejorada para añadir un item al carrito ===
-     Ahora utiliza el parámetro "e" para obtener la imagen del producto */
-function addToCart(e, name, price, cafeteria) {
-    // Encontrar la imagen del producto de manera más robusta
-    let imageSrc = '';
-    if (e && e.target) {
-        const menuItem = e.target.closest('.menu-item');
-        if (menuItem) {
-            const imageElement = menuItem.querySelector('.menu-item-image img');
-            if (imageElement && imageElement.src) {
-                imageSrc = imageElement.src;
-                console.log("Imagen encontrada:", imageSrc); // Depuración
-            }
-        }
+// --- Usuario ---
+function loadUserData() {
+    const email = localStorage.getItem('utpedidos_email') || sessionStorage.getItem('utpedidos_email');
+    if (email) {
+        const userName = email.split('@')[0].split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        document.getElementById('welcome-text').textContent = 'Bienvenido, ' + userName;
     }
-    // Si no se encontró la imagen, buscar por nombre en el documento
-    if (!imageSrc || imageSrc === '') {
-        const allImages = document.querySelectorAll('.menu-item-image img');
-        for (let img of allImages) {
-            if (img.alt === name || img.closest('.menu-item').querySelector('h4').textContent === name) {
-                imageSrc = img.src;
-                console.log("Imagen encontrada por nombre:", imageSrc); // Depuración
-                break;
-            }
-        }
+}
+
+// --- Mostrar cafeterías ---
+function showCafeterias() {
+    document.getElementById('cafeterias-view').style.display = 'block';
+    document.getElementById('menu-view').style.display = 'none';
+    document.body.className = '';
+    currentCafeteria = null;
+}
+
+// --- Mostrar menú ---
+async function showMenu(cafeteriaId) {
+    currentCafeteria = cafeteriaId;
+    document.body.className = `cafeteria-${cafeteriaId}`;
+
+    let data;
+    try {
+        const response = await apiGet(`/cafeteria/${cafeteriaId}/menu`);
+        data = response.success ? response : cafeteriaDataFallback[0];
+    } catch {
+        data = cafeteriaDataFallback[0];
     }
-    
-    // Convertir el precio a número (si fuese necesario)
-    price = parseFloat(price);
-    
-    // Cargar carrito desde localStorage
-    const savedCart = localStorage.getItem('upedidosCart');
-    let cartItems = savedCart ? JSON.parse(savedCart) : [];
-    
-    // Buscar si el item ya existe en el carrito
-    const existingItemIndex = cartItems.findIndex(item => 
-        item.name === name && item.cafeteria === cafeteria);
-    
-    if (existingItemIndex !== -1) {
-        cartItems[existingItemIndex].quantity += 1;
-        // Actualizar la imagen si se encontró una nueva
-        if (imageSrc && imageSrc !== '') {
-            cartItems[existingItemIndex].image = imageSrc;
-        }
-    } else {
-        cartItems.push({
-            name: name,
-            price: price,
-            cafeteria: cafeteria,
-            image: imageSrc,
-            quantity: 1
+
+    document.getElementById('cafeteria-title').textContent = data.title || `Cafetería #${cafeteriaId}`;
+    document.getElementById('cafeteria-description').textContent = data.description || 'Menú disponible';
+
+    const menuContainer = document.getElementById('menu-container');
+    menuContainer.innerHTML = '';
+
+    data.categories.forEach(category => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'menu-category';
+
+        let categoryHTML = `<h3>${category.nombre}</h3><div class="menu-items">`;
+        category.productos.forEach(item => {
+            categoryHTML += `
+                <div class="menu-item">
+                    <div class="menu-item-image">
+                        <img src="${item.imagen}" alt="${item.nombre}">
+                    </div>
+                    <div class="menu-item-details">
+                        <h4>${item.nombre}</h4>
+                        <p>${item.descripcion}</p>
+                        <div class="price-add">
+                            <span class="price">${item.precio.toFixed(2)}</span>
+                            <button class="add-to-cart-btn" onclick="addToCart('${item.nombre}', ${item.precio}, '${data.title}', '${item.imagen}')">
+                                <i class="fas fa-plus"></i> Agregar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
         });
-    }
-    
+
+        categoryHTML += '</div>';
+        categoryDiv.innerHTML = categoryHTML;
+        menuContainer.appendChild(categoryDiv);
+    });
+
+    document.getElementById('cafeterias-view').style.display = 'none';
+    document.getElementById('menu-view').style.display = 'block';
+
+    setTimeout(() => {
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach((item, index) => item.style.animationDelay = `${index * 0.1}s`);
+    }, 100);
+}
+
+// --- Carrito ---
+function addToCart(name, price, cafeteria, image) {
+    const existingItem = cartItems.find(item => item.name === name && item.cafeteria === cafeteria);
+    if (existingItem) existingItem.quantity += 1;
+    else cartItems.push({ name, price: parseFloat(price), cafeteria, image, quantity: 1 });
+
+    saveCartToStorage();
     updateCartCount();
     showToast(`${name} añadido al carrito`);
     animateCartIcon();
-    localStorage.setItem('upedidosCart', JSON.stringify(cartItems));
 }
 
-// Función para actualizar el contador del carrito
+function saveCartToStorage() { localStorage.setItem('utpedidos_cart', JSON.stringify(cartItems)); }
+function loadCartFromStorage() {
+    const savedCart = localStorage.getItem('utpedidos_cart');
+    if (savedCart) cartItems = JSON.parse(savedCart);
+}
 function updateCartCount() {
-    const savedCart = localStorage.getItem('upedidosCart');
-    let cartItems = savedCart ? JSON.parse(savedCart) : [];
-    const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-    
-    const cartBadge = document.querySelector('.cart-badge');
-    if (cartBadge) { cartBadge.textContent = totalItems; }
-    const cartCount = document.getElementById('cart-count');
-    if (cartCount) { cartCount.textContent = totalItems; }
+    const total = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+    document.getElementById('cart-count').textContent = total;
 }
 
-// Función para animar el icono del carrito
-function animateCartIcon() {
-    const cartIcon = document.getElementById('cart-btn');
-    if (cartIcon) {
-        cartIcon.classList.add('added-animation');
-        setTimeout(() => {
-            cartIcon.classList.remove('added-animation');
-        }, 500);
-    }
-}
+function openCart() { renderCartItems(); document.getElementById('cart-modal').style.display = 'flex'; }
+function closeCart() { document.getElementById('cart-modal').style.display = 'none'; }
 
-// Función para mostrar notificación toast
-function showToast(message) {
-    let toast = document.getElementById('toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast';
-        toast.style.position = 'fixed';
-        toast.style.bottom = '20px';
-        toast.style.right = '20px';
-        toast.style.background = 'rgba(0,0,0,0.8)';
-        toast.style.color = 'white';
-        toast.style.padding = '10px 20px';
-        toast.style.borderRadius = '5px';
-        toast.style.zIndex = '1000';
-        toast.style.display = 'none';
-        document.body.appendChild(toast);
-    }
-    toast.textContent = message;
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, 3000);
-}
-
-// Función para abrir el modal del carrito
-function openCart() {
-    renderCartItems();
-    document.getElementById('cart-modal').style.display = 'flex';
-}
-
-// Función para cerrar el modal del carrito
-function closeCart() {
-    document.getElementById('cart-modal').style.display = 'none';
-}
-
-/* === Función mejorada para renderizar los items del carrito === */
 function renderCartItems() {
-    const savedCart = localStorage.getItem('upedidosCart');
-    let cartItems = savedCart ? JSON.parse(savedCart) : [];
-    
-    const cartItemsContainer = document.getElementById('cart-items');
-    cartItemsContainer.innerHTML = '';
-    
+    const container = document.getElementById('cart-items');
+    container.innerHTML = '';
     if (cartItems.length === 0) {
-        cartItemsContainer.innerHTML = '<p>Tu carrito está vacío.</p>';
+        container.innerHTML = '<p style="text-align:center;color:#666;">Tu carrito está vacío</p>';
         document.getElementById('cart-total').textContent = '$0.00';
         return;
     }
-    
+
     let total = 0;
-    // Agrupar items por cafetería
-    const cafeterias = [...new Set(cartItems.map(item => item.cafeteria))];
-    cafeterias.forEach(cafeteria => {
-        // Obtener color de cafetería
-        let cafeteriaColor = '';
-        if (cafeteria === 'Cafetería #1') {
-            cafeteriaColor = 'var(--cafe1-color,#ff9e80)';
-        } else if (cafeteria === 'Cafetería #2') {
-            cafeteriaColor = 'var(--cafe2-color, #80d8ff)';
-        } else if (cafeteria === 'Cafetería #3') {
-            cafeteriaColor = 'var(--cafe3-color, #8adc9d)';
-        }
-        
-        // Encabezado de la cafetería
-        const cafeteriaHeader = document.createElement('h4');
-        cafeteriaHeader.textContent = cafeteria;
-        cafeteriaHeader.style.marginTop = '15px';
-        cafeteriaHeader.style.padding = '5px';
-        cafeteriaHeader.style.borderRadius = '8px';
-        cafeteriaHeader.style.backgroundColor = cafeteriaColor;
-        cafeteriaHeader.style.color = 'white';
-        cartItemsContainer.appendChild(cafeteriaHeader);
-        
-        // Filtrar items de la misma cafetería
-        const cafeteriaItems = cartItems.filter(item => item.cafeteria === cafeteria);
-        cafeteriaItems.forEach(item => {
+    const cafeteriaGroups = {};
+    cartItems.forEach(item => {
+        if (!cafeteriaGroups[item.cafeteria]) cafeteriaGroups[item.cafeteria] = [];
+        cafeteriaGroups[item.cafeteria].push(item);
+    });
+
+    Object.keys(cafeteriaGroups).forEach(cafeteria => {
+        const header = document.createElement('h4');
+        header.textContent = cafeteria;
+        header.style.margin = '20px 0 10px';
+        header.style.color = 'var(--theme-color, var(--primary))';
+        header.style.borderBottom = '2px solid var(--theme-color, var(--primary))';
+        header.style.paddingBottom = '5px';
+        container.appendChild(header);
+
+        cafeteriaGroups[cafeteria].forEach(item => {
             const itemTotal = item.price * item.quantity;
             total += itemTotal;
             const cartItem = document.createElement('div');
             cartItem.className = 'cart-item';
-            
-            // Verificar si existe una imagen; si no, usar placeholder
-            let imgSrc = item.image && item.image !== '' ? item.image : '../imagenes/placeholder-food.png';
-            // Intentar actualizar la imagen basándonos en el nombre si es necesario
-            if ((!item.image || item.image === '') && document.querySelectorAll('.menu-item').length > 0) {
-                const menuItems = document.querySelectorAll('.menu-item');
-                for (let menuItem of menuItems) {
-                    const title = menuItem.querySelector('h4');
-                    if (title && title.textContent === item.name) {
-                        const img = menuItem.querySelector('.menu-item-image img');
-                        if (img && img.src) {
-                            imgSrc = img.src;
-                            item.image = imgSrc; // Actualizar el item en el carrito
-                            break;
-                        }
-                    }
-                }
-            }
-            
             cartItem.innerHTML = `
-                <div class="cart-item-img-container">
-                    <img src="${imgSrc}" alt="${item.name}" class="cart-item-img" onerror="this.src='../imagenes/placeholder-food.png'">
-                </div>
+                <img src="${item.image}" alt="${item.name}" class="cart-item-img">
                 <div class="cart-item-details">
                     <div class="cart-item-title">${item.name}</div>
-                    <div class="cart-item-price">$${item.price.toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}</div>
+                    <div class="cart-item-price">${item.price.toFixed(2)} x ${item.quantity} = ${itemTotal.toFixed(2)}</div>
                 </div>
                 <div class="cart-item-actions">
                     <div class="cart-item-quantity">
-                        <button class="qty-btn" onclick="decreaseQuantity('${item.name}', '${item.cafeteria}')">-</button>
-                        <span class="qty-value">${item.quantity}</span>
-                        <button class="qty-btn" onclick="increaseQuantity('${item.name}', '${item.cafeteria}')">+</button>
+                        <button class="qty-btn" onclick="decreaseQuantity('${item.name}','${item.cafeteria}')">-</button>
+                        <span>${item.quantity}</span>
+                        <button class="qty-btn" onclick="increaseQuantity('${item.name}','${item.cafeteria}')">+</button>
                     </div>
-                    <button class="remove-item" onclick="removeItem('${item.name}', '${item.cafeteria}')">×</button>
+                    <button class="remove-item" onclick="removeItem('${item.name}','${item.cafeteria}')">&times;</button>
                 </div>
             `;
-            cartItemsContainer.appendChild(cartItem);
+            container.appendChild(cartItem);
         });
     });
-    
+
     document.getElementById('cart-total').textContent = '$' + total.toFixed(2);
-    // Guardar el carrito actualizado (con imágenes, si se encontraron)
-    localStorage.setItem('upedidosCart', JSON.stringify(cartItems));
 }
 
-// Función para aumentar la cantidad de un item
 function increaseQuantity(name, cafeteria) {
-    const savedCart = localStorage.getItem('upedidosCart');
-    let cartItems = savedCart ? JSON.parse(savedCart) : [];
-    const item = cartItems.find(item => item.name === name && item.cafeteria === cafeteria);
-    if (item) {
-        item.quantity += 1;
-        updateCartCount();
-        renderCartItems();
-        localStorage.setItem('upedidosCart', JSON.stringify(cartItems));
-    }
+    const item = cartItems.find(i => i.name === name && i.cafeteria === cafeteria);
+    if (item) { item.quantity += 1; saveCartToStorage(); updateCartCount(); renderCartItems(); }
 }
 
-// Función para disminuir la cantidad de un item
 function decreaseQuantity(name, cafeteria) {
-    const savedCart = localStorage.getItem('upedidosCart');
-    let cartItems = savedCart ? JSON.parse(savedCart) : [];
-    const item = cartItems.find(item => item.name === name && item.cafeteria === cafeteria);
-    if (item && item.quantity > 1) {
-        item.quantity -= 1;
-        updateCartCount();
-        renderCartItems();
-        localStorage.setItem('upedidosCart', JSON.stringify(cartItems));
-    } else if (item && item.quantity === 1) {
-        removeItem(name, cafeteria);
-    }
+    const item = cartItems.find(i => i.name === name && i.cafeteria === cafeteria);
+    if (!item) return;
+    if (item.quantity > 1) item.quantity -= 1;
+    else { removeItem(name, cafeteria); return; }
+    saveCartToStorage(); updateCartCount(); renderCartItems();
 }
 
-// Función para eliminar un item
 function removeItem(name, cafeteria) {
-    const savedCart = localStorage.getItem('upedidosCart');
-    let cartItems = savedCart ? JSON.parse(savedCart) : [];
-    cartItems = cartItems.filter(item => !(item.name === name && item.cafeteria === cafeteria));
-    updateCartCount();
-    renderCartItems();
-    localStorage.setItem('upedidosCart', JSON.stringify(cartItems));
+    cartItems = cartItems.filter(i => !(i.name === name && i.cafeteria === cafeteria));
+    saveCartToStorage(); updateCartCount(); renderCartItems();
 }
 
-// Función para hacer el pedido
-// Función para hacer el pedido
-function checkout() {
-    // Cargar carrito desde localStorage para asegurar datos actualizados
-    const savedCart = localStorage.getItem('upedidosCart');
-    let cartItems = savedCart ? JSON.parse(savedCart) : [];
-    
-    if (cartItems.length === 0) {
-        showToast('Tu carrito está vacío');
-        return;
-    }
-    
-    // Cargar pedidos desde localStorage si existen
-    let ordersHistory = [];
-    const savedOrders = localStorage.getItem('upedidosOrders');
-    if (savedOrders) {
-        ordersHistory = JSON.parse(savedOrders);
-    }
-    
-    // Obtener el método de pago seleccionado (si existe el selector)
-    let selectedPayment = "efectivo"; // Método por defecto
-    const paymentRadio = document.querySelector('input[name="payment"]:checked');
-    if (paymentRadio) {
-        selectedPayment = paymentRadio.value;
-    }
-    
-    // Obtener tiempos de pedido y recogida
-    const orderTime = getCurrentTime();
-    const pickupTime = getPickupTime();
-    
-    // Añadir cada item del carrito al historial de pedidos
-    cartItems.forEach(item => {
-        const orderId = Date.now() + Math.floor(Math.random() * 1000);
-        ordersHistory.push({
-            id: orderId,
-            name: item.name,
-            description: "", // Opcional: puedes agregar descripción si la tienes
-            price: parseFloat(item.price),
-            quantity: item.quantity,
-            cafeteria: item.cafeteria,
-            orderTime: orderTime,
-            pickupTime: pickupTime,
-            paymentMethod: selectedPayment,
-            status: "pendiente",
-            image: item.image || `${item.name.toLowerCase().replace(/ - /g, '-').replace(/ /g, '-')}.jpg`
-        });
-    });
-    
-    // Guardar pedidos en localStorage
-    localStorage.setItem('upedidosOrders', JSON.stringify(ordersHistory));
-    
-    showToast('¡Gracias por tu pedido! Tu comida estará lista pronto.');
-    
-    // Vaciar el carrito después del pedido
-    cartItems = [];
-    localStorage.setItem('upedidosCart', JSON.stringify(cartItems));
-    updateCartCount();
-    closeCart();
-    
-    // Si existe renderOrdersHistory y estamos en la página de pedidos, actualizar la vista
-    if (typeof renderOrdersHistory === 'function' && document.getElementById('pedidos-pendientes')) {
-        renderOrdersHistory();
-    } else {
-        // Opcionalmente, redirigir a la página de pedidos
-        // window.location.href = 'pedidos.html';
+// --- Checkout ---
+async function checkout() {
+    if (cartItems.length === 0) { showToast('Tu carrito está vacío'); return; }
+
+    const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'efectivo';
+
+    const itemsByCafeteria = cartItems.reduce((groups, item) => {
+        if (!groups[item.cafeteria]) groups[item.cafeteria] = [];
+        groups[item.cafeteria].push(item);
+        return groups;
+    }, {});
+
+    try {
+        for (const [cafeteriaName, items] of Object.entries(itemsByCafeteria)) {
+            const cafeteria = cafeteriaDataFallback.find(c => c.title === cafeteriaName) || { id_cafeteria: 1 };
+            const pedidoData = {
+                cafeteria_id: cafeteria.id_cafeteria,
+                horario_id: 1,
+                items: items.map(i => ({ producto_id: i.id_producto || 1, quantity: i.quantity, price: i.price })),
+                notas: `Pedido desde web - ${new Date().toLocaleString()}`
+            };
+            await apiPost('/pedido', pedidoData);
+        }
+        showToast('¡Pedido realizado exitosamente!');
+        cartItems = []; saveCartToStorage(); updateCartCount(); closeCart();
+    } catch {
+        showToast('Error al realizar el pedido, intenta más tarde');
     }
 }
 
-// Funciones auxiliares para tiempo de pedido y recogida
-function getCurrentTime() {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const formattedHours = hours % 12 || 12;
-    const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-    return `${formattedHours}:${formattedMinutes} ${ampm}`;
+// --- Utilidades ---
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 3000);
 }
 
-function getPickupTime() {
-    const now = new Date();
-    // Entre 30 y 120 minutos de tiempo de preparación
-    const randomMinutes = Math.floor(Math.random() * (120 - 30 + 1) + 30);
-    now.setMinutes(now.getMinutes() + randomMinutes);
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const formattedHours = hours % 12 || 12;
-    const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-    return `${formattedHours}:${formattedMinutes} ${ampm}`;
+function animateCartIcon() {
+    const cartBtn = document.getElementById('cart-btn');
+    cartBtn.classList.add('added-animation');
+    setTimeout(() => cartBtn.classList.remove('added-animation'), 500);
 }
