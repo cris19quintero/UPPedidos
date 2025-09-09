@@ -17,7 +17,7 @@ CORS(app)  # Permitir requests desde JavaScript
 
 # Configuración de la base de datos
 DB_CONFIG = {
-    'host': 'localhost',
+    'host': '127.0.0.1',
     'user': 'root',
     'password': '',  # CAMBIAR POR TU CONTRASEÑA
     'database': 'UTPPEDIDOS',

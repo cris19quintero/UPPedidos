@@ -1,58 +1,131 @@
 // --- Configuración de API ---
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// --- Cliente API ---
+// --- Cliente API mejorado ---
 async function apiGet(endpoint) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, { credentials: 'include' });
-    if (!response.ok) throw new Error('Error en la petición');
-    return response.json();
+    try {
+        const url = `${API_BASE_URL}${endpoint}`;
+        console.log('🌐 Haciendo request a:', url);
+        
+        const response = await fetch(url, { 
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Respuesta recibida:', data);
+        return data;
+    } catch (error) {
+        console.error('❌ Error en API:', error);
+        throw error;
+    }
 }
 
 async function apiPost(endpoint, data) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data)
-    });
-    if (!response.ok) throw new Error('Error en la petición');
-    return response.json();
+    try {
+        const url = `${API_BASE_URL}${endpoint}`;
+        console.log('🌐 POST a:', url, 'con datos:', data);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('✅ POST exitoso:', result);
+        return result;
+    } catch (error) {
+        console.error('❌ Error en POST:', error);
+        throw error;
+    }
 }
 
-// --- Datos locales de fallback ---
-const cafeteriaDataFallback = [
-    {
+// --- Datos locales de fallback (mejorados) ---
+const cafeteriaDataFallback = {
+    1: {
         id_cafeteria: 1,
-        title: 'Cafetería Edificio 1',
-        description: 'Menú disponible',
-        categories: [
+        nombre: 'CAFETERÍA #1',
+        descripcion: 'Edificio No. 1',
+        productos: [
             {
-                nombre: 'Desayunos',
-                productos: [
-                    { id_producto: 1, nombre: 'Desayuno Panameño', precio: 4.50, descripcion: 'Huevos, tortilla, queso, café', imagen: 'default-food.jpg' }
-                ]
+                id_producto: 1,
+                nombre_producto: 'Desayuno Panameño',
+                descripcion: 'Huevos revueltos, tortilla, queso blanco, café',
+                precio: 4.50,
+                categoria_nombre: 'Desayunos',
+                horario_nombre: 'Desayuno'
             },
             {
-                nombre: 'Almuerzos',
-                productos: [
-                    { id_producto: 2, nombre: 'Pollo Guisado', precio: 5.50, descripcion: 'Pollo guisado, arroz, ensalada', imagen: 'default-food.jpg' }
-                ]
+                id_producto: 2,
+                nombre_producto: 'Pollo Guisado',
+                descripcion: 'Pollo guisado con arroz y ensalada',
+                precio: 5.50,
+                categoria_nombre: 'Almuerzos',
+                horario_nombre: 'Almuerzo'
+            }
+        ]
+    },
+    2: {
+        id_cafeteria: 2,
+        nombre: 'CAFETERÍA #2',
+        descripcion: 'Edificio No. 2',
+        productos: [
+            {
+                id_producto: 3,
+                nombre_producto: 'Sandwich de Pollo',
+                descripcion: 'Pan integral con pollo a la plancha',
+                precio: 3.75,
+                categoria_nombre: 'Sandwiches',
+                horario_nombre: 'Merienda'
+            }
+        ]
+    },
+    3: {
+        id_cafeteria: 3,
+        nombre: 'CAFETERÍA #3',
+        descripcion: 'Edificio No. 3',
+        productos: [
+            {
+                id_producto: 4,
+                nombre_producto: 'Arroz con Pollo',
+                descripcion: 'Arroz amarillo con pollo y vegetales',
+                precio: 6.00,
+                categoria_nombre: 'Almuerzos',
+                horario_nombre: 'Almuerzo'
             }
         ]
     }
-];
+};
 
 // --- Variables globales ---
 let cartItems = [];
 let currentCafeteria = null;
+let horarios = [];
 
 // --- Inicialización ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     loadUserData();
     loadCartFromStorage();
     updateCartCount();
+    
+    // Cargar horarios disponibles
+    await loadHorarios();
 
     document.getElementById('cart-btn').addEventListener('click', openCart);
     document.getElementById('cart-modal').addEventListener('click', e => {
@@ -60,25 +133,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Animaciones tarjetas cafetería
-    const cards = document.querySelectorAll('.cafeteria-card');
-    cards.forEach(card => {
-        card.addEventListener('mousemove', e => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const rotateX = (y - centerY) / centerY * -10;
-            const rotateY = (x - centerX) / centerX * 10;
-            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
-        });
-        card.addEventListener('mouseleave', () => {
-            card.style.transition = 'transform 0.5s ease';
-            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
-            setTimeout(() => card.style.transition = '', 500);
-        });
-    });
+    initCafeteriaAnimations();
 });
+
+// --- Cargar horarios desde API ---
+async function loadHorarios() {
+    try {
+        const response = await apiGet('/horarios');
+        if (response.success) {
+            horarios = response.horarios;
+        }
+    } catch (error) {
+        console.warn('⚠️ No se pudieron cargar horarios, usando valores por defecto');
+        horarios = [
+            { id_horario: 1, nombre: 'Desayuno' },
+            { id_horario: 2, nombre: 'Almuerzo' },
+            { id_horario: 3, nombre: 'Merienda' }
+        ];
+    }
+}
 
 // --- Usuario ---
 function loadUserData() {
@@ -89,50 +162,79 @@ function loadUserData() {
     }
 }
 
-// --- Mostrar cafeterías ---
-function showCafeterias() {
-    document.getElementById('cafeterias-view').style.display = 'block';
-    document.getElementById('menu-view').style.display = 'none';
-    document.body.className = '';
-    currentCafeteria = null;
-}
-
-// --- Mostrar menú ---
+// --- Mostrar menú (CORREGIDO para usar tu API real) ---
 async function showMenu(cafeteriaId) {
     currentCafeteria = cafeteriaId;
     document.body.className = `cafeteria-${cafeteriaId}`;
 
-    let data;
+    let cafeteriaData;
+    
     try {
-        const response = await apiGet(`/cafeteria/${cafeteriaId}/menu`);
-        data = response.success ? response : cafeteriaDataFallback[0];
-    } catch {
-        data = cafeteriaDataFallback[0];
+        // 🔥 USANDO TU API REAL
+        const response = await apiGet(`/productos/${cafeteriaId}`);
+        
+        if (response.success && response.productos) {
+            // Transformar datos de tu API al formato que necesita el frontend
+            cafeteriaData = {
+                id_cafeteria: cafeteriaId,
+                nombre: `CAFETERÍA #${cafeteriaId}`,
+                descripcion: `Edificio No. ${cafeteriaId}`,
+                productos: response.productos
+            };
+        } else {
+            throw new Error('No se encontraron productos');
+        }
+    } catch (error) {
+        console.warn('⚠️ Usando datos de fallback:', error);
+        cafeteriaData = cafeteriaDataFallback[cafeteriaId];
     }
 
-    document.getElementById('cafeteria-title').textContent = data.title || `Cafetería #${cafeteriaId}`;
-    document.getElementById('cafeteria-description').textContent = data.description || 'Menú disponible';
+    if (!cafeteriaData) {
+        showToast('No se pudo cargar el menú de esta cafetería');
+        return;
+    }
+
+    // Actualizar interfaz
+    document.getElementById('cafeteria-title').textContent = cafeteriaData.nombre;
+    document.getElementById('cafeteria-description').textContent = cafeteriaData.descripcion;
+
+    // Agrupar productos por categoría
+    const productosPorCategoria = {};
+    cafeteriaData.productos.forEach(producto => {
+        const categoria = producto.categoria_nombre || 'Otros';
+        if (!productosPorCategoria[categoria]) {
+            productosPorCategoria[categoria] = [];
+        }
+        productosPorCategoria[categoria].push(producto);
+    });
 
     const menuContainer = document.getElementById('menu-container');
     menuContainer.innerHTML = '';
 
-    data.categories.forEach(category => {
+    // Renderizar cada categoría
+    Object.keys(productosPorCategoria).forEach(categoria => {
         const categoryDiv = document.createElement('div');
         categoryDiv.className = 'menu-category';
 
-        let categoryHTML = `<h3>${category.nombre}</h3><div class="menu-items">`;
-        category.productos.forEach(item => {
+        let categoryHTML = `<h3>${categoria}</h3><div class="menu-items">`;
+        
+        productosPorCategoria[categoria].forEach(producto => {
+            const imageName = producto.imagen || `${producto.nombre_producto.toLowerCase().replace(/\s+/g, '-')}.jpg`;
+            
             categoryHTML += `
                 <div class="menu-item">
                     <div class="menu-item-image">
-                        <img src="${item.imagen}" alt="${item.nombre}">
+                        <img src="../imagenes/${imageName}" 
+                             alt="${producto.nombre_producto}"
+                             onerror="this.src='../imagenes/default-food.jpg'">
                     </div>
                     <div class="menu-item-details">
-                        <h4>${item.nombre}</h4>
-                        <p>${item.descripcion}</p>
+                        <h4>${producto.nombre_producto}</h4>
+                        <p>${producto.descripcion}</p>
                         <div class="price-add">
-                            <span class="price">${item.precio.toFixed(2)}</span>
-                            <button class="add-to-cart-btn" onclick="addToCart('${item.nombre}', ${item.precio}, '${data.title}', '${item.imagen}')">
+                            <span class="price">$${parseFloat(producto.precio).toFixed(2)}</span>
+                            <button class="add-to-cart-btn" 
+                                    onclick="addToCart('${producto.nombre_producto}', ${producto.precio}, '${cafeteriaData.nombre}', '../imagenes/${imageName}', ${producto.id_producto})">
                                 <i class="fas fa-plus"></i> Agregar
                             </button>
                         </div>
@@ -149,17 +251,29 @@ async function showMenu(cafeteriaId) {
     document.getElementById('cafeterias-view').style.display = 'none';
     document.getElementById('menu-view').style.display = 'block';
 
+    // Animaciones
     setTimeout(() => {
         const menuItems = document.querySelectorAll('.menu-item');
         menuItems.forEach((item, index) => item.style.animationDelay = `${index * 0.1}s`);
     }, 100);
 }
 
-// --- Carrito ---
-function addToCart(name, price, cafeteria, image) {
+// --- Carrito (actualizado) ---
+function addToCart(name, price, cafeteria, image, productoId = null) {
     const existingItem = cartItems.find(item => item.name === name && item.cafeteria === cafeteria);
-    if (existingItem) existingItem.quantity += 1;
-    else cartItems.push({ name, price: parseFloat(price), cafeteria, image, quantity: 1 });
+    
+    if (existingItem) {
+        existingItem.quantity += 1;
+    } else {
+        cartItems.push({ 
+            name, 
+            price: parseFloat(price), 
+            cafeteria, 
+            image, 
+            quantity: 1,
+            producto_id: productoId || 1 // Para la API
+        });
+    }
 
     saveCartToStorage();
     updateCartCount();
@@ -167,22 +281,116 @@ function addToCart(name, price, cafeteria, image) {
     animateCartIcon();
 }
 
-function saveCartToStorage() { localStorage.setItem('utpedidos_cart', JSON.stringify(cartItems)); }
+// --- Checkout (usando tu API real) ---
+async function checkout() {
+    if (cartItems.length === 0) { 
+        showToast('Tu carrito está vacío'); 
+        return; 
+    }
+
+    const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'efectivo';
+
+    // Agrupar items por cafetería
+    const itemsByCafeteria = cartItems.reduce((groups, item) => {
+        if (!groups[item.cafeteria]) groups[item.cafeteria] = [];
+        groups[item.cafeteria].push(item);
+        return groups;
+    }, {});
+
+    try {
+        for (const [cafeteriaName, items] of Object.entries(itemsByCafeteria)) {
+            // Extraer ID de cafetería del nombre
+            const cafeteriaId = parseInt(cafeteriaName.match(/\d+/)[0]);
+            
+            const pedidoData = {
+                cafeteria_id: cafeteriaId,
+                horario_id: 1, // Por defecto, o determinar según la hora
+                items: items.map(item => ({
+                    producto_id: item.producto_id,
+                    quantity: item.quantity,
+                    price: item.price
+                })),
+                notas: `Pedido desde web - Método de pago: ${selectedPayment}`
+            };
+            
+            console.log('🛒 Enviando pedido:', pedidoData);
+            const response = await apiPost('/pedido', pedidoData);
+            
+            if (response.success) {
+                console.log('✅ Pedido creado:', response.pedido_id);
+            }
+        }
+        
+        showToast('¡Pedido realizado exitosamente!');
+        cartItems = []; 
+        saveCartToStorage(); 
+        updateCartCount(); 
+        closeCart();
+        
+    } catch (error) {
+        console.error('❌ Error en checkout:', error);
+        showToast('Error al realizar el pedido. Intenta de nuevo.');
+    }
+}
+
+// --- Funciones de animación ---
+function initCafeteriaAnimations() {
+    const cards = document.querySelectorAll('.cafeteria-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = (y - centerY) / centerY * -10;
+            const rotateY = (x - centerX) / centerX * 10;
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transition = 'transform 0.5s ease';
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+            setTimeout(() => card.style.transition = '', 500);
+        });
+    });
+}
+
+// --- Resto de funciones (sin cambios) ---
+function showCafeterias() {
+    document.getElementById('cafeterias-view').style.display = 'block';
+    document.getElementById('menu-view').style.display = 'none';
+    document.body.className = '';
+    currentCafeteria = null;
+}
+
+function saveCartToStorage() { 
+    localStorage.setItem('utpedidos_cart', JSON.stringify(cartItems)); 
+}
+
 function loadCartFromStorage() {
     const savedCart = localStorage.getItem('utpedidos_cart');
     if (savedCart) cartItems = JSON.parse(savedCart);
 }
+
 function updateCartCount() {
     const total = cartItems.reduce((sum, i) => sum + i.quantity, 0);
     document.getElementById('cart-count').textContent = total;
 }
 
-function openCart() { renderCartItems(); document.getElementById('cart-modal').style.display = 'flex'; }
-function closeCart() { document.getElementById('cart-modal').style.display = 'none'; }
+function openCart() { 
+    renderCartItems(); 
+    document.getElementById('cart-modal').style.display = 'flex'; 
+}
+
+function closeCart() { 
+    document.getElementById('cart-modal').style.display = 'none'; 
+}
 
 function renderCartItems() {
     const container = document.getElementById('cart-items');
     container.innerHTML = '';
+    
     if (cartItems.length === 0) {
         container.innerHTML = '<p style="text-align:center;color:#666;">Tu carrito está vacío</p>';
         document.getElementById('cart-total').textContent = '$0.00';
@@ -191,6 +399,7 @@ function renderCartItems() {
 
     let total = 0;
     const cafeteriaGroups = {};
+    
     cartItems.forEach(item => {
         if (!cafeteriaGroups[item.cafeteria]) cafeteriaGroups[item.cafeteria] = [];
         cafeteriaGroups[item.cafeteria].push(item);
@@ -208,13 +417,15 @@ function renderCartItems() {
         cafeteriaGroups[cafeteria].forEach(item => {
             const itemTotal = item.price * item.quantity;
             total += itemTotal;
+            
             const cartItem = document.createElement('div');
             cartItem.className = 'cart-item';
             cartItem.innerHTML = `
-                <img src="${item.image}" alt="${item.name}" class="cart-item-img">
+                <img src="${item.image}" alt="${item.name}" class="cart-item-img" 
+                     onerror="this.src='../imagenes/default-food.jpg'">
                 <div class="cart-item-details">
                     <div class="cart-item-title">${item.name}</div>
-                    <div class="cart-item-price">${item.price.toFixed(2)} x ${item.quantity} = ${itemTotal.toFixed(2)}</div>
+                    <div class="cart-item-price">$${item.price.toFixed(2)} x ${item.quantity} = $${itemTotal.toFixed(2)}</div>
                 </div>
                 <div class="cart-item-actions">
                     <div class="cart-item-quantity">
@@ -234,53 +445,37 @@ function renderCartItems() {
 
 function increaseQuantity(name, cafeteria) {
     const item = cartItems.find(i => i.name === name && i.cafeteria === cafeteria);
-    if (item) { item.quantity += 1; saveCartToStorage(); updateCartCount(); renderCartItems(); }
+    if (item) { 
+        item.quantity += 1; 
+        saveCartToStorage(); 
+        updateCartCount(); 
+        renderCartItems(); 
+    }
 }
 
 function decreaseQuantity(name, cafeteria) {
     const item = cartItems.find(i => i.name === name && i.cafeteria === cafeteria);
     if (!item) return;
-    if (item.quantity > 1) item.quantity -= 1;
-    else { removeItem(name, cafeteria); return; }
-    saveCartToStorage(); updateCartCount(); renderCartItems();
+    
+    if (item.quantity > 1) {
+        item.quantity -= 1;
+    } else { 
+        removeItem(name, cafeteria); 
+        return; 
+    }
+    
+    saveCartToStorage(); 
+    updateCartCount(); 
+    renderCartItems();
 }
 
 function removeItem(name, cafeteria) {
     cartItems = cartItems.filter(i => !(i.name === name && i.cafeteria === cafeteria));
-    saveCartToStorage(); updateCartCount(); renderCartItems();
+    saveCartToStorage(); 
+    updateCartCount(); 
+    renderCartItems();
 }
 
-// --- Checkout ---
-async function checkout() {
-    if (cartItems.length === 0) { showToast('Tu carrito está vacío'); return; }
-
-    const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'efectivo';
-
-    const itemsByCafeteria = cartItems.reduce((groups, item) => {
-        if (!groups[item.cafeteria]) groups[item.cafeteria] = [];
-        groups[item.cafeteria].push(item);
-        return groups;
-    }, {});
-
-    try {
-        for (const [cafeteriaName, items] of Object.entries(itemsByCafeteria)) {
-            const cafeteria = cafeteriaDataFallback.find(c => c.title === cafeteriaName) || { id_cafeteria: 1 };
-            const pedidoData = {
-                cafeteria_id: cafeteria.id_cafeteria,
-                horario_id: 1,
-                items: items.map(i => ({ producto_id: i.id_producto || 1, quantity: i.quantity, price: i.price })),
-                notas: `Pedido desde web - ${new Date().toLocaleString()}`
-            };
-            await apiPost('/pedido', pedidoData);
-        }
-        showToast('¡Pedido realizado exitosamente!');
-        cartItems = []; saveCartToStorage(); updateCartCount(); closeCart();
-    } catch {
-        showToast('Error al realizar el pedido, intenta más tarde');
-    }
-}
-
-// --- Utilidades ---
 function showToast(msg) {
     const toast = document.getElementById('toast');
     toast.textContent = msg;
@@ -291,5 +486,4 @@ function showToast(msg) {
 function animateCartIcon() {
     const cartBtn = document.getElementById('cart-btn');
     cartBtn.classList.add('added-animation');
-    setTimeout(() => cartBtn.classList.remove('added-animation'), 500);
-}
+    setTimeout(() => cartBtn.classList.remove('added-animation'), 500);}

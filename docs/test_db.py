@@ -2,10 +2,10 @@ import mysql.connector
 
 try:
     conexion = mysql.connector.connect(
-        host="localhost",
+        host="127.0.0.1",
         user="root",
         password="",  # tu contraseña si la tienes
-        database="UTPPEDIDOS"  # exacto, mayúsculas
+        database="utppedidos"  # exacto, mayúsculas
     )
     print("✅ Conexión exitosa.")
 except mysql.connector.Error as err:
