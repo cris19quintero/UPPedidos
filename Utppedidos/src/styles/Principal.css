@@ -1,0 +1,227 @@
+/* src/styles/Principal.css */
+
+:root {
+    --primary: #7b1fa2;
+    --primary-light: #9c27b0;
+    --primary-dark: #5e1687;
+    --accent: #8e24aa;
+    --light-purple: #e1bee7;
+    --white: #ffffff;
+    --gray-light: #f5f5f5;
+    --gray: #e0e0e0;
+    --text-dark: #333333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Notificación de inicio de sesión */
+.notification {
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+    animation: fadeOut 4s forwards;
+}
+
+.notification.success {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+    border: 1px solid #2e7d32;
+}
+
+/* Header y sección de bienvenida */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--primary);
+    color: white;
+    border-radius: 0 0 15px 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.welcome-section h1 {
+    font-size: 2.5rem;
+    margin: 0;
+}
+
+.user-section {
+    font-size: 1.2rem;
+    text-decoration: underline;
+}
+
+/* Galería de imágenes de comida */
+.food-gallery {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.food-item {
+    height:100%;
+    display: block;
+    flex: 1 1 300px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    transition: transform 0.3s ease;
+}
+
+.food-item:hover {
+    transform: translateY(-5px);
+}
+
+.food-item img {
+    width: 100%;
+    height: 330px;
+    object-fit: cover;
+    display: flex;
+}
+
+/* Sección de horarios */
+.schedules {
+    text-align: center;
+    padding: 20px;
+}
+
+.schedules h2 {
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+    color: var(--text-dark);
+}
+
+.schedule-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.meal-schedule {
+    flex: 1 1 300px;
+    margin-bottom: 20px;
+}
+
+.meal-schedule h3 {
+    color: var(--primary);
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+
+.time-block {
+    background-color: var(--gray-light);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.time-block:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.time-block p {
+    font-size: 1.5rem;
+    margin: 10px 0;
+    color: var(--text-dark);
+}
+
+/* Botón de continuar */
+.continue-btn {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.continue-btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.continue-btn:active {
+    transform: translateY(0);
+}
+
+/* Animaciones */
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; visibility: hidden; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .schedule-container {
+        flex-direction: column;
+    }
+    
+    .food-gallery {
+        justify-content: center;
+    }
+    
+    .food-item {
+        flex: 0 0 100%;
+        max-width: 400px;
+        margin-bottom: 15px;
+    }
+    
+    header {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+        padding: 15px;
+    }
+    
+    .welcome-section h1 {
+        font-size: 2rem;
+    }
+    
+    .user-section {
+        font-size: 1rem;
+    }
+    
+    .schedules {
+        padding: 15px;
+    }
+    
+    .schedules h2 {
+        font-size: 1.5rem;
+    }
+    
+    .meal-schedule h3 {
+        font-size: 1.3rem;
+    }
+    
+    .time-block p {
+        font-size: 1.2rem;
+    }
+    
+    .continue-btn {
+        padding: 12px 30px;
+        font-size: 1rem;
+    }
+}

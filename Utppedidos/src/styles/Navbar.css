@@ -1,0 +1,146 @@
+/* src/styles/Navbar.css - Solo estilos del navbar extraídos de tu HTML */
+
+:root {
+    --primary: #7b1fa2;
+    --primary-light: #9c27b0;
+    --primary-dark: #5e1687;
+    --white: #ffffff;
+    --light-gray: #f5f5f5;
+    --gray: #e0e0e0;
+    --text-dark: #333333;
+    --cafeteria1-color: #ff9e80;
+    --cafeteria1-dark: #ff6e40;
+    --cafeteria1-light: #ffccbc;
+    --cafeteria2-color: #80d8ff;
+    --cafeteria2-dark: #40c4ff;
+    --cafeteria2-light: #b3e5fc;
+    --cafeteria3-color: #8adc9d;
+    --cafeteria3-dark: #5beda7;
+    --cafeteria3-light: #8ffc97;
+}
+
+/* Temas dinámicos */
+body.cafeteria-1 { --theme-color: var(--cafeteria1-color); --theme-dark: var(--cafeteria1-dark); --theme-light: var(--cafeteria1-light); }
+body.cafeteria-2 { --theme-color: var(--cafeteria2-color); --theme-dark: var(--cafeteria2-dark); --theme-light: var(--cafeteria2-light); }
+body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--cafeteria3-dark); --theme-light: var(--cafeteria3-light); }
+
+/* Header */
+  .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo {
+    height: 80px;
+    width: auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+#welcome-text {
+    font-size: 1.8rem;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+        .nav-buttons {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-button {
+            text-decoration: none;
+            color: var(--text-dark);
+            position: relative;
+        }
+
+       .icon-container {
+            background: rgba(255, 255, 255, 0.8);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+
+        .nav-button:hover .icon-container {
+            background: var(--theme-color, var(--primary));
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .cart-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+.separator {
+    height: 2px;
+    background-color: var(--primary);
+    width: 100%;
+    margin: 0px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px 20px;
+    }
+    
+    .logo-container {
+        gap: 10px;
+    }
+    
+    .logo {
+        height: 60px;
+    }
+    
+    #welcome-text {
+        font-size: 1.4rem;
+    }
+    
+    .nav-buttons {
+        gap: 15px;
+    }
+    
+    .icon-container {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+}

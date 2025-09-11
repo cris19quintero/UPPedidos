@@ -1,0 +1,74 @@
+/* src/styles/Pedidos.css */
+.pedidos-main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.pedidos-main h2 {
+  color: var(--primary);
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.pedidos-section {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.pedidos-section h3 {
+  color: var(--primary);
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary);
+  font-weight: 600;
+}
+
+.pedidos-container {
+  display: grid;
+  gap: 1rem;
+}
+
+.pedido-item {
+  background: var(--light-gray);
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary);
+  transition: all 0.3s ease;
+}
+
+.pedido-item:hover {
+  background: #eeeeee;
+  transform: translateX(5px);
+}
+
+.pedido-item p {
+  margin-bottom: 0.5rem;
+  color: var(--text-dark);
+}
+
+.pedido-item p:last-child {
+  margin-bottom: 0;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.pedidos-container p {
+  text-align: center;
+  color: var(--text-light);
+  font-style: italic;
+  padding: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pedidos-main {
+    padding: 1rem 0.5rem;
+  }
+}
