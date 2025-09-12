@@ -1,5 +1,6 @@
-/* src/styles/Menu.css - CSS completo corregido */
-
+/* ================================
+   Variables Globales
+================================ */
 :root {
     --primary: #7b1fa2;
     --primary-light: #9c27b0;
@@ -24,7 +25,9 @@ body.cafeteria-1 { --theme-color: var(--cafeteria1-color); --theme-dark: var(--c
 body.cafeteria-2 { --theme-color: var(--cafeteria2-color); --theme-dark: var(--cafeteria2-dark); --theme-light: var(--cafeteria2-light); }
 body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--cafeteria3-dark); --theme-light: var(--cafeteria3-light); }
 
-/* Loading */
+/* ================================
+   Loading
+================================ */
 .loading-container {
     display: flex;
     flex-direction: column;
@@ -48,7 +51,9 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     100% { transform: rotate(360deg); }
 }
 
-/* Título de selección */
+/* ================================
+   Vista de selección de cafeterías
+================================ */
 .selection-title {
     text-align: center;
     margin-bottom: 40px;
@@ -56,7 +61,6 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     color: var(--text-dark);
 }
 
-/* Vista de selección de cafeterías - usando clases del HTML original */
 .cafeterias-container {
     display: flex;
     justify-content: space-between;
@@ -117,41 +121,22 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     font-size: 1.2rem;
 }
 
-/* Colores específicos para cada cafetería */
-.cafeteria-card.cafe-1 {
-    background-color: var(--cafeteria1-color);
-    animation: pulse-cafeteria2 3s infinite alternate;
-}
+/* Colores específicos */
+.cafeteria-card.cafe-1 { background-color: var(--cafeteria1-color); animation: pulse-cafeteria 3s infinite alternate; }
+.cafeteria-card.cafe-1:hover { background-color: var(--cafeteria1-dark); }
+.cafeteria-card.cafe-2 { background-color: var(--cafeteria2-color); animation: pulse-cafeteria 3s infinite alternate; }
+.cafeteria-card.cafe-2:hover { background-color: var(--cafeteria2-dark); }
+.cafeteria-card.cafe-3 { background-color: var(--cafeteria3-color); animation: pulse-cafeteria 3s infinite alternate; }
+.cafeteria-card.cafe-3:hover { background-color: var(--cafeteria3-dark); }
 
-.cafeteria-card.cafe-1:hover {
-    background-color: var(--cafeteria1-dark);
-}
-
-.cafeteria-card.cafe-2 {
-    background-color: var(--cafeteria2-color);
-    animation: pulse-cafeteria2 3s infinite alternate;
-}
-
-.cafeteria-card.cafe-2:hover {
-    background-color: var(--cafeteria2-dark);
-}
-
-.cafeteria-card.cafe-3 {
-    background-color: var(--cafeteria3-color);
-    animation: pulse-cafeteria2 3s infinite alternate;
-}
-
-.cafeteria-card.cafe-3:hover {
-    background-color: var(--cafeteria3-dark);
-}
-
-/* Animación pulse */
-@keyframes pulse-cafeteria2 {
+@keyframes pulse-cafeteria {
     0% { opacity: 0.9; }
     100% { opacity: 1; }
 }
 
-/* Vista del menú */
+/* ================================
+   Vista del menú
+================================ */
 .menu-view {
     max-width: 1200px;
     margin: 0 auto;
@@ -231,7 +216,9 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     gap: 2rem;
 }
 
-/* Categorías del menú */
+/* ================================
+   Categorías del menú
+================================ */
 .menu-category {
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
@@ -239,10 +226,11 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     margin-bottom: 30px;
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    animation: pulse-category 4s ease-in-out infinite;
 }
 
 .menu-category h3 {
-    color: var(--theme-color, var(--dark));
+    color: var(--theme-color, var(--primary));
     font-size: 1.8rem;
     margin-bottom: 20px;
     text-align: center;
@@ -256,6 +244,9 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     gap: 20px;
 }
 
+/* ================================
+   Ítems del menú
+================================ */
 .menu-item {
     display: flex;
     background: rgba(255, 255, 255, 0.8);
@@ -263,12 +254,18 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: fadeInUp 0.6s ease forwards;
 }
 
 .menu-item:hover {
     transform: translateY(-5px);
     box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+}
+
+.menu-item.unavailable {
+    opacity: 0.6;
+    filter: grayscale(0.5);
 }
 
 .menu-item-image {
@@ -290,6 +287,17 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     transform: scale(1.1);
 }
 
+.placeholder-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--light-gray);
+    font-size: 2rem;
+    color: var(--gray);
+}
+
 .menu-item-details {
     padding: 15px;
     flex: 1;
@@ -302,6 +310,7 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     font-size: 1.1rem;
     margin-bottom: 5px;
     color: var(--text-dark);
+    font-weight: 600;
 }
 
 .menu-item-details p {
@@ -309,12 +318,14 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     color: #666;
     margin-bottom: 15px;
     flex-grow: 1;
+    line-height: 1.4;
 }
 
 .price-add {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
 }
 
 .price {
@@ -323,10 +334,12 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     font-size: 1.3rem;
 }
 
+/* ================================
+   Botón agregar al carrito
+================================ */
 .add-to-cart-btn {
-    background: linear-gradient(5deg, var(--theme-dark));
+    background: linear-gradient(45deg, var(--theme-color, var(--primary)), var(--theme-dark, var(--primary-dark)));
     color: white;
-    margin: 10px;
     border: none;
     padding: 8px 15px;
     border-radius: 20px;
@@ -334,14 +347,60 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     transition: all 0.3s ease;
     font-size: 0.9rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 100px;
+    justify-content: center;
 }
 
 .add-to-cart-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Error container */
+.add-to-cart-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+}
+
+.add-to-cart-btn.adding {
+    opacity: 0.8;
+    cursor: wait;
+    background: linear-gradient(45deg, #666, #888);
+}
+
+.add-to-cart-btn.disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Spinner dentro del botón */
+.btn-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid transparent;
+    border-top: 1.5px solid currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 3px;
+}
+
+/* ================================
+   Mensajes y errores
+================================ */
+.no-items {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 10px;
+    border: 1px dashed var(--gray);
+}
+
 .error-container {
     display: flex;
     flex-direction: column;
@@ -356,60 +415,156 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     margin-bottom: 1rem;
 }
 
-/* Responsive */
+/* ================================
+   Toast Notifications
+================================ */
+.toast-notification {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 280px;
+    max-width: 350px;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border-radius: 25px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    gap: 12px;
+}
+
+.toast-icon {
+    background: rgba(255, 255, 255, 0.2);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.toast-message {
+    font-weight: 500;
+    font-size: 14px;
+    flex: 1;
+    line-height: 1.3;
+}
+
+/* ================================
+   Animaciones
+================================ */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-category {
+    0%, 100% { opacity: 0.9; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.005); }
+}
+
+@keyframes slideInRight {
+    0% { transform: translateX(100%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+/* Animación escalonada */
+.menu-item:nth-child(1) { animation-delay: 0.1s; }
+.menu-item:nth-child(2) { animation-delay: 0.2s; }
+.menu-item:nth-child(3) { animation-delay: 0.3s; }
+.menu-item:nth-child(4) { animation-delay: 0.4s; }
+.menu-item:nth-child(5) { animation-delay: 0.5s; }
+.menu-item:nth-child(6) { animation-delay: 0.6s; }
+
+/* ================================
+   Responsive
+================================ */
 @media (max-width: 768px) {
     .cafeterias-container {
         flex-direction: column;
         gap: 20px;
         padding: 15px;
     }
-    
     .cafeteria-card {
         min-width: auto;
         max-width: 400px;
         margin: 0 auto;
     }
-    
-    .cafeteria-image {
-        height: 200px;
-    }
-    
-    .cafeteria-info h3 {
-        font-size: 1.5rem;
-    }
-    
-    .cafeteria-info p {
-        font-size: 1rem;
-    }
-    
-    .selection-title {
-        font-size: 1.3rem;
-        padding: 0 1rem;
-    }
-    
-    .menu-header {
-        padding: 1rem;
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .menu-items {
-        grid-template-columns: 1fr;
-    }
-    
-    .menu-item {
-        flex-direction: column;
-    }   
+    .cafeteria-image { height: 200px; }
+    .cafeteria-info h3 { font-size: 1.5rem; }
+    .cafeteria-info p { font-size: 1rem; }
+    .selection-title { font-size: 1.3rem; padding: 0 1rem; }
+    .menu-header { padding: 1rem; flex-direction: column; text-align: center; }
+    .menu-items { grid-template-columns: 1fr; gap: 15px; }
+    .menu-item { flex-direction: column; }
+    .menu-item-image { width: 100%; height: 200px; }
+    .price-add { flex-direction: column; align-items: stretch; gap: 10px; }
+    .add-to-cart-btn { width: 100%; padding: 12px; font-size: 1rem; }
+    .toast-notification { right: 10px; left: 10px; top: 70px; max-width: none; }
+}
 
-    
-    .menu-item-image {
-        width: 100%;
-        height: 200px;
-    }
-    
-    .price-add {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.5rem;
+@media (max-width: 480px) {
+    .menu-category { padding: 15px; margin-bottom: 20px; }
+    .menu-category h3 { font-size: 1.5rem; }
+    .menu-item-details { padding: 12px; }
+    .menu-item-details h4 { font-size: 1rem; }
+    .menu-item-details p { font-size: 0.85rem; }
+    /* cierre del media query pequeño */
+    .menu-item-details p { font-size: 0.85rem; }
+}
+
+/* ================================
+   Estados de foco / accesibilidad
+================================ */
+button:focus,
+.add-to-cart-btn:focus,
+.back-button:focus,
+.cart-toggle-btn:focus {
+    outline: 3px solid rgba(0,0,0,0.08);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 4px rgba(0,0,0,0.06);
+}
+
+/* Si quieres marcador visual con color del tema */
+.add-to-cart-btn:focus {
+    outline: 3px solid var(--theme-color, var(--primary));
+    outline-offset: 2px;
+}
+
+/* ================================
+   Utilidades
+================================ */
+.visually-hidden {
+    position: absolute !important;
+    height: 1px; width: 1px;
+    overflow: hidden;
+    clip: rect(1px, 1px, 1px, 1px);
+    white-space: nowrap;
+}
+
+/* Micro-ajustes para botones y enlaces */
+button, .back-button, .cart-toggle-btn {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+/* ================================
+   Preferencias de reducción de movimiento
+================================ */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
     }
 }

@@ -40,7 +40,7 @@ function Login() {
           <img src="/imagenes/logo.png" alt="UTPedidos Logo" className="secondary-logo" />
         </div>
 
-        <h1 className="login-title">UTPedidos</h1>
+        <h1 className="login-title">UTPpedidos</h1>
 
         <form onSubmit={handleSubmit}>
           {/* Email */}
@@ -104,7 +104,7 @@ function Login() {
       {/* Imagen lateral */}
       <div className="login-image">
         <div className="brand-overlay">
-          <div className="brand-name">UTPedidos</div>
+          <div className="brand-name">UTPpedidos</div>
         </div>
       </div>
     </div>

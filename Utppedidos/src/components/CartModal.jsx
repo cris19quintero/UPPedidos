@@ -1,14 +1,21 @@
-// src/components/CartModal.jsx
+// src/components/CartModal.jsx - Actualizado para usar dataService
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import dataService from '../services/dataService'
+import  '../styles/CartModal.css'
 
 function CartModal({ isOpen, onClose }) {
-  const { cart, clearCart, removeFromCart, getCartTotal } = useCart()
+  const { cart, clearCart, removeFromCart, getCartTotal, createOrderFromCart, loading } = useCart()
   const { user } = useAuth()
   const navigate = useNavigate()
   const [isProcessing, setIsProcessing] = useState(false)
+  const [orderOptions, setOrderOptions] = useState({
+    metodo_pago: 'efectivo',
+    observaciones: '',
+    tipo_pedido: 'normal'
+  })
 
   if (!isOpen) return null
 
@@ -18,35 +25,27 @@ function CartModal({ isOpen, onClose }) {
     setIsProcessing(true)
     
     try {
-      // Simular procesamiento del pedido
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Crear el pedido usando el método del contexto
+      const newOrder = await createOrderFromCart({
+        ...orderOptions,
+        usuario_info: user || dataService.getUserProfile()
+      })
       
-      // Crear el pedido
-      const newOrder = {
-        id: Date.now(),
-        items: [...cart],
-        total: getCartTotal(),
-        estado: 'pendiente',
-        fecha: new Date().toISOString(),
-        usuario: user.email
-      }
+      // Mostrar mensaje de éxito
+      alert(`¡Pedido #${newOrder.numero_orden} realizado con éxito! 
       
-      // Guardar en localStorage (simulando backend)
-      const existingOrders = JSON.parse(localStorage.getItem('utpedidos_orders') || '[]')
-      existingOrders.push(newOrder)
-      localStorage.setItem('utpedidos_orders', JSON.stringify(existingOrders))
+📧 Se ha enviado una confirmación a tu correo.
+🕐 Tiempo estimado: 15-20 minutos
+📍 Retira tu pedido en ${newOrder.cafeteria_info?.nombre || 'la cafetería seleccionada'}
+
+Puedes ver el estado en la sección de Pedidos.`)
       
-      // Limpiar carrito
-      clearCart()
-      
-      // Mostrar mensaje de éxito y redirigir
-      alert('¡Pedido realizado con éxito! Puedes ver el estado en la sección de Pedidos.')
       onClose()
       navigate('/pedidos')
       
     } catch (error) {
       console.error('Error al procesar pedido:', error)
-      alert('Hubo un error al procesar tu pedido. Por favor intenta de nuevo.')
+      alert(`Hubo un error al procesar tu pedido: ${error.message}. Por favor intenta de nuevo.`)
     } finally {
       setIsProcessing(false)
     }
@@ -57,6 +56,37 @@ function CartModal({ isOpen, onClose }) {
       onClose()
     }
   }
+
+  const handleInputChange = (e) => {
+    setOrderOptions({
+      ...orderOptions,
+      [e.target.name]: e.target.value
+    })
+  }
+
+  const getEstimatedTime = () => {
+    if (cart.length === 0) return 0
+    
+    // Calcular tiempo basado en los items del carrito
+    const totalTime = cart.reduce((time, item) => {
+      return time + (item.tiempo_preparacion || 10) * (item.quantity || 1)
+    }, 0)
+    
+    return Math.max(10, Math.min(totalTime, 30)) // Entre 10 y 30 minutos
+  }
+
+  const getCafeteriaInfo = () => {
+    if (cart.length === 0) return null
+    
+    const firstItem = cart[0]
+    if (firstItem.cafeteriaId) {
+      return dataService.getCafeteriaById(firstItem.cafeteriaId)
+    }
+    return null
+  }
+
+  const cafeteriaInfo = getCafeteriaInfo()
+  const estimatedTime = getEstimatedTime()
 
   return (
     <div className="modal-overlay" onClick={handleOverlayClick}>
@@ -76,15 +106,26 @@ function CartModal({ isOpen, onClose }) {
             </div>
           ) : (
             <>
+              {/* Información de la cafetería */}
+              {cafeteriaInfo && (
+                <div className="cafeteria-info-banner">
+                  <div className="cafeteria-details">
+                    <h4>📍 {cafeteriaInfo.nombre}</h4>
+                    <p>{cafeteriaInfo.edificio}</p>
+                    <p>⏱️ Tiempo estimado: {estimatedTime} minutos</p>
+                  </div>
+                </div>
+              )}
+
               <div className="cart-items">
                 {cart.map((item, index) => (
-                  <div key={index} className="cart-item">
+                  <div key={item.id_carrito || index} className="cart-item">
                     <div className="cart-item-info">
                       <div className="cart-item-name">{item.nombre}</div>
                       <div className="cart-item-price">
-                        ${item.precio.toFixed(2)} 
+                        ${(item.precio || 0).toFixed(2)} 
                         {item.quantity && item.quantity > 1 && 
-                          ` x ${item.quantity}`
+                          ` x ${item.quantity} = ${((item.precio || 0) * item.quantity).toFixed(2)}`
                         }
                       </div>
                       {item.descripcion && (
@@ -92,23 +133,86 @@ function CartModal({ isOpen, onClose }) {
                           {item.descripcion}
                         </div>
                       )}
+                      <div className="cart-item-meta">
+                        <span className="item-category">{item.categoria || 'Sin categoría'}</span>
+                        {item.tiempo_preparacion && (
+                          <span className="item-time">⏱️ {item.tiempo_preparacion}min</span>
+                        )}
+                      </div>
                     </div>
                     <button 
                       className="cart-item-remove"
                       onClick={() => removeFromCart(index)}
                       title="Eliminar del carrito"
+                      disabled={isProcessing}
                     >
                       🗑️
                     </button>
                   </div>
                 ))}
               </div>
+
+              {/* Opciones del pedido */}
+              <div className="order-options">
+                <h4>Opciones del pedido</h4>
+                
+                <div className="option-group">
+                  <label htmlFor="metodo_pago">Método de pago:</label>
+                  <select 
+                    id="metodo_pago"
+                    name="metodo_pago"
+                    value={orderOptions.metodo_pago}
+                    onChange={handleInputChange}
+                    disabled={isProcessing}
+                  >
+                    <option value="efectivo">💵 Efectivo</option>
+                    <option value="tarjeta">💳 Tarjeta</option>
+                    <option value="transferencia">📱 Transferencia</option>
+                  </select>
+                </div>
+
+                <div className="option-group">
+                  <label htmlFor="tipo_pedido">Tipo de pedido:</label>
+                  <select 
+                    id="tipo_pedido"
+                    name="tipo_pedido"
+                    value={orderOptions.tipo_pedido}
+                    onChange={handleInputChange}
+                    disabled={isProcessing}
+                  >
+                    <option value="normal">🍽️ Normal</option>
+                    <option value="express">⚡Para llevar (+$0.50)</option>
+                  </select>
+                </div>
+
+                <div className="option-group">
+                  <label htmlFor="observaciones">Observaciones (opcional):</label>
+                  <textarea 
+                    id="observaciones"
+                    name="observaciones"
+                    value={orderOptions.observaciones}
+                    onChange={handleInputChange}
+                    placeholder="Ej: Sin cebolla, extra salsa..."
+                    rows="2"
+                    disabled={isProcessing}
+                  />
+                </div>
+              </div>
               
               <div className="cart-total">
                 <div className="cart-summary">
                   <p><strong>Total de items:</strong> {cart.length}</p>
+                  <p><strong>Cantidad total:</strong> {cart.reduce((sum, item) => sum + (item.quantity || 1), 0)}</p>
+                  {orderOptions.tipo_pedido === 'express' && (
+                    <p><strong>Cargo express:</strong> $1.00</p>
+                  )}
                   <p className="total-price">
-                    <strong>Total a pagar: ${getCartTotal().toFixed(2)}</strong>
+                    <strong>
+                      Total a pagar: ${(getCartTotal() + (orderOptions.tipo_pedido === 'express' ? 1 : 0)).toFixed(2)}
+                    </strong>
+                  </p>
+                  <p className="estimated-time">
+                    <strong>⏱️ Tiempo estimado: {estimatedTime} minutos</strong>
                   </p>
                 </div>
               </div>
@@ -130,9 +234,9 @@ function CartModal({ isOpen, onClose }) {
               <button 
                 onClick={handleCheckout}
                 className={`checkout-btn ${isProcessing ? 'processing' : ''}`}
-                disabled={isProcessing}
+                disabled={isProcessing || loading}
               >
-                {isProcessing ? (
+                {isProcessing || loading ? (
                   <>
                     <span className="loading-spinner"></span>
                     Procesando...

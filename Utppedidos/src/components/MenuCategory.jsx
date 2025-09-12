@@ -1,44 +1,59 @@
-// src/components/MenuCategory.jsx
 import React, { useState } from 'react'
 import { useCart } from '../context/CartContext'
+import dataService from '../services/dataService'
 
-function MenuCategory({ categoria, items, cafeteriaId }) {
+function MenuCategory({ categoria, items, cafeteriaId, isOpen = true }) {
   const { addToCart } = useCart()
   const [addingItems, setAddingItems] = useState({})
+  const [toast, setToast] = useState({ show: false, message: '' })
+
+  const showToast = (message) => {
+    setToast({ show: true, message })
+    setTimeout(() => {
+      setToast({ show: false, message: '' })
+    }, 3000)
+  }
 
   const handleAddToCart = async (item) => {
+    if (!isOpen) {
+      alert('Esta cafetería está cerrada en este momento.')
+      return
+    }
+
     const itemKey = `${cafeteriaId}-${item.id || item.nombre}`
     
-    // Evitar múltiples clics
     if (addingItems[itemKey]) return
     
     setAddingItems(prev => ({ ...prev, [itemKey]: true }))
     
     try {
-      // Agregar información adicional al item
+      const cafeteriaInfo = dataService.getCafeteriaById(cafeteriaId)
+      
       const itemWithExtras = {
         ...item,
         cafeteriaId: cafeteriaId,
+        cafeteria: cafeteriaInfo?.nombre || `Cafetería ${cafeteriaId}`,
         categoria: categoria,
         timestamp: new Date().toISOString(),
-        quantity: 1
+        quantity: 1,
+        precio_unitario: item.precio || 0,
+        subtotal: item.precio || 0
       }
       
-      addToCart(itemWithExtras)
+      await addToCart(itemWithExtras)
       
-      // Feedback visual
+      // Mostrar toast con el nombre del producto
+      showToast(`${item.nombre} añadido al carrito`)
+      
       setTimeout(() => {
         setAddingItems(prev => ({ ...prev, [itemKey]: false }))
       }, 1000)
       
     } catch (error) {
       console.error('Error al agregar al carrito:', error)
+      showToast('Error al agregar el item al carrito')
       setAddingItems(prev => ({ ...prev, [itemKey]: false }))
     }
-  }
-
-  const isItemAvailable = (item) => {
-    return item.disponible !== false
   }
 
   if (!items || items.length === 0) {
@@ -53,79 +68,82 @@ function MenuCategory({ categoria, items, cafeteriaId }) {
   }
 
   return (
-    <div className="menu-category">
-      <h3>{categoria}</h3>
-      <div className="menu-items">
-        {items.map((item, index) => {
-          const itemKey = `${cafeteriaId}-${item.id || item.nombre}`
-          const isAdding = addingItems[itemKey]
-          const available = isItemAvailable(item)
-          
-          return (
-            <div 
-              key={item.id || index} 
-              className={`menu-item ${!available ? 'unavailable' : ''}`}
-            >
-              {/* Imagen del producto (opcional) */}
-              {item.imagen && (
+    <>
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="toast-notification">
+          <div className="toast-content">
+            <div className="toast-icon">✓</div>
+            <span className="toast-message">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="menu-category">
+        <h3>{categoria}</h3>
+        <div className="menu-items">
+          {items.map((item, index) => {
+            const itemKey = `${cafeteriaId}-${item.id || item.nombre}`
+            const isAdding = addingItems[itemKey]
+            const available = item.disponible !== false && isOpen
+            
+            return (
+              <div 
+                key={item.id || index} 
+                className={`menu-item ${!available ? 'unavailable' : ''}`}
+              >
                 <div className="menu-item-image">
-                  <img 
-                    src={item.imagen} 
-                    alt={item.nombre}
-                    onError={(e) => {
-                      e.target.style.display = 'none'
-                    }}
-                  />
+                  {item.imagen ? (
+                    <img 
+                      src={item.imagen} 
+                      alt={item.nombre}
+                      onError={(e) => {
+                        e.target.src = '/imagenes/default-food.jpg'
+                      }}
+                    />
+                  ) : (
+                    <div className="placeholder-image">
+                      🍽️
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              <div className="menu-item-details">
-                <h4>{item.nombre}</h4>
-                {item.descripcion && (
-                  <p className="item-description">{item.descripcion}</p>
-                )}
                 
-                {!available && (
-                  <div className="unavailable-badge">
-                    No disponible temporalmente
-                  </div>
-                )}
-                
-                <div className="price-add">
-                  <span className="price">
-                    ${item.precio ? item.precio.toFixed(2) : '0.00'}
-                  </span>
+                <div className="menu-item-details">
+                  <h4>{item.nombre}</h4>
                   
-                  <button 
-                    className={`add-to-cart-btn ${isAdding ? 'adding' : ''}`}
-                    onClick={() => handleAddToCart(item)}
-                    disabled={!available || isAdding}
-                    title={
-                      !available 
-                        ? 'Producto no disponible' 
-                        : isAdding 
-                          ? 'Agregando...' 
-                          : 'Agregar al carrito'
-                    }
-                  >
-                    {isAdding ? (
-                      <>
-                        <span className="btn-spinner"></span>
-                        Agregando...
-                      </>
-                    ) : !available ? (
-                      '❌ No disponible'
-                    ) : (
-                      '+ Agregar'
-                    )}
-                  </button>
+                  {item.descripcion && (
+                    <p>{item.descripcion}</p>
+                  )}
+                  
+                  <div className="price-add">
+                    <span className="price">${(item.precio || 0).toFixed(2)}</span>
+                    
+                    <button 
+                      className={`add-to-cart-btn ${isAdding ? 'adding' : ''} ${!available ? 'disabled' : ''}`}
+                      onClick={() => handleAddToCart(item)}
+                      disabled={!available || isAdding}
+                    >
+                      {isAdding ? (
+                        <>
+                          <span className="btn-spinner"></span>
+                          Agregando...
+                        </>
+                      ) : !available ? (
+                        'No disponible'
+                      ) : (
+                        <>
+                          <i className="fas fa-plus"></i> Agregar
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
