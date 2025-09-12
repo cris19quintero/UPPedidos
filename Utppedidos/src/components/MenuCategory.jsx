@@ -116,7 +116,7 @@ function MenuCategory({ categoria, items, cafeteriaId }) {
                     ) : !available ? (
                       '❌ No disponible'
                     ) : (
-                      '🛒 Agregar al carrito'
+                      '+ Agregar'
                     )}
                   </button>
                 </div>

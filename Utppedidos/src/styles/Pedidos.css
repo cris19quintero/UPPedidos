@@ -1,74 +1,212 @@
-/* src/styles/Pedidos.css */
-.pedidos-main {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+/* src/styles/Pedidos.css - Basado en el diseño HTML original */
+
+:root {
+    --primary-color: #8A2BE2;
+    --secondary-color: #E6E6FA;
+    --accent-color: #4B0082;
+    --grey-light: #f0f0f0;
+    --grey-dark: #707070;
+    --cafe1-color: #ff9e80;
+    --cafe2-color: #80d8ff;
+    --cafe3-color: #8adc9d;
+    --success-color: #4CAF50;
+    --warning-color: #F44336;
+    --primary: #7b1fa2;
+    --primary-light: #9c27b0;
+    --primary-dark: #5e1687;
+    --white: #ffffff;
+    --light-gray: #f5f5f5;
+    --gray: #e0e0e0;
+    --text-dark: #333333;
 }
 
-.pedidos-main h2 {
-  color: var(--primary);
-  font-size: 2rem;
-  margin-bottom: 2rem;
-  text-align: center;
-  font-weight: 600;
+main {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
 }
 
 .pedidos-section {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
 }
 
-.pedidos-section h3 {
-  color: var(--primary);
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid var(--primary);
-  font-weight: 600;
+.pedidos-section h2 {
+    color: #333;
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid var(--primary-color);
 }
 
 .pedidos-container {
-  display: grid;
-  gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .pedido-item {
-  background: var(--light-gray);
-  padding: 1.5rem;
-  border-radius: 8px;
-  border-left: 4px solid var(--primary);
-  transition: all 0.3s ease;
+    display: flex;
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .pedido-item:hover {
-  background: #eeeeee;
-  transform: translateX(5px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-.pedido-item p {
-  margin-bottom: 0.5rem;
-  color: var(--text-dark);
+.pedido-img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
-.pedido-item p:last-child {
-  margin-bottom: 0;
-  font-weight: 600;
-  color: var(--primary);
+.pedido-info {
+    flex: 1;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
-.pedidos-container p {
-  text-align: center;
-  color: var(--text-light);
-  font-style: italic;
-  padding: 2rem;
+.pedido-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pedido-quantity {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.pedido-desc {
+    color: var(--grey-dark);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.pedido-cafeteria, 
+.pedido-hora {
+    font-size: 0.9rem;
+    margin-bottom: 3px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pedido-cafeteria i,
+.pedido-hora i {
+    width: 16px;
+    color: var(--primary-color);
+}
+
+.pedido-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pedido-status {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-pendiente {
+    background-color: var(--cafe3-color);
+    color: #333;
+}
+
+.status-expirado {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.mark-retirado-btn {
+    background-color: var(--success-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+}
+
+.mark-retirado-btn:hover {
+    background-color: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.mark-retirado-btn i {
+    font-size: 0.8rem;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .pedidos-main {
-    padding: 1rem 0.5rem;
-  }
+    main {
+        padding: 0 15px;
+    }
+    
+    .pedido-img {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .pedidos-section h2 {
+        font-size: 1.2rem;
+    }
+    
+    .pedido-title {
+        font-size: 1.1rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .pedido-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .mark-retirado-btn {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .pedido-item {
+        flex-direction: column;
+    }
+    
+    .pedido-img {
+        width: 100%;
+        height: 150px;
+    }
+    
+    .pedido-info {
+        padding: 12px;
+    }
 }

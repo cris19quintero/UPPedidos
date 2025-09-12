@@ -29,6 +29,7 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin: 0%;
       padding: 15px 30px;
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(10px);
@@ -39,6 +40,7 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
     display: flex;
     align-items: center;
     gap: 15px;
+    margin: 0%;
 }
 
 .logo {
@@ -90,6 +92,13 @@ body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--c
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
         }
 
+.selection-title{
+        text-align: center;
+        margin-top: 20px;
+    margin-bottom: 40px;
+    font-size: 1.5rem;
+    color: var(--text-dark);
+}
 
         .cart-badge {
             position: absolute;

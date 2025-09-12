@@ -1,15 +1,39 @@
-    /* src/styles/Menu.css */
+/* src/styles/Menu.css - CSS completo corregido */
 
-    /* Loading */
-    .loading-container {
+:root {
+    --primary: #7b1fa2;
+    --primary-light: #9c27b0;
+    --primary-dark: #5e1687;
+    --white: #ffffff;
+    --light-gray: #f5f5f5;
+    --gray: #e0e0e0;
+    --text-dark: #333333;
+    --cafeteria1-color: #dd937d;
+    --cafeteria1-dark: #ff6e40;
+    --cafeteria1-light: #ffccbc;
+    --cafeteria2-color: #5fcfff;
+    --cafeteria2-dark: #40c4ff;
+    --cafeteria2-light: #b3e5fc;
+    --cafeteria3-color: #93caa0;
+    --cafeteria3-dark: #5beda7;
+    --cafeteria3-light: #8ffc97;
+}
+
+/* Temas dinámicos */
+body.cafeteria-1 { --theme-color: var(--cafeteria1-color); --theme-dark: var(--cafeteria1-dark); --theme-light: var(--cafeteria1-light); }
+body.cafeteria-2 { --theme-color: var(--cafeteria2-color); --theme-dark: var(--cafeteria2-dark); --theme-light: var(--cafeteria2-light); }
+body.cafeteria-3 { --theme-color: var(--cafeteria3-color); --theme-dark: var(--cafeteria3-dark); --theme-light: var(--cafeteria3-light); }
+
+/* Loading */
+.loading-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 60vh;
-    }
+}
 
-    .loading-spinner {
+.loading-spinner {
     border: 4px solid #f3f3f3;
     border-top: 4px solid var(--primary);
     border-radius: 50%;
@@ -17,333 +41,350 @@
     height: 40px;
     animation: spin 1s linear infinite;
     margin-bottom: 1rem;
-    }
+}
 
-    @keyframes spin {
+@keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-    }
+}
 
-    /* Selección de cafeterías */
-    .menu-main {
+/* Título de selección */
+.selection-title {
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 1.5rem;
+    color: var(--text-dark);
+}
+
+/* Vista de selección de cafeterías - usando clases del HTML original */
+.cafeterias-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+    flex-wrap: wrap;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
-    }
+    padding: 20px;
+}
 
-    .selection-header {
-    text-align: center;
-    margin-bottom: 3rem;
-    }
-
-    .selection-header h1 {
-    color: var(--primary);
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    }
-
-    .selection-title {
-    color: var(--text-dark);
-    font-size: 1.3rem;
-    font-weight: 400;
-    margin-bottom: 2rem;
-    }
-
-    .cafeterias-selection-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 2rem;
-    margin-bottom: 3rem;
-    }
-
-    .cafeteria-selection-card {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+.cafeteria-card {
+    flex: 1;
+    min-width: 300px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.5s ease;
     cursor: pointer;
-    transition: all 0.3s ease;
     position: relative;
+    transform-style: preserve-3d;
+}
+
+.cafeteria-card:hover {
+    transform: translateY(-10px) rotateX(5deg);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.cafeteria-image {
+    width: 100%;
+    height: 230px;
     overflow: hidden;
-    }
+}
 
-    .cafeteria-selection-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-
-    .cafeteria-selection-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--primary);
-    }
-
-    .card-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    }
-
-    .card-icon {
-    width: 80px;
-    height: 80px;
-    margin-bottom: 1rem;
-    border-radius: 50%;
-    overflow: hidden;
-    background: var(--light-gray);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    }
-
-    .card-icon img {
+.cafeteria-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    }
+    transition: transform 0.5s ease;
+}
 
-    .cafeteria-selection-card h3 {
-    font-size: 1.5rem;
-    color: var(--primary);
-    margin-bottom: 0.5rem;
-    }
+.cafeteria-card:hover .cafeteria-image img {
+    transform: scale(1.1);
+}
 
-    .cafeteria-selection-card p {
-    color: var(--text-dark);
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-    }
-
-    .card-arrow {
-    font-size: 1.5rem;
-    color: var(--primary);
-    font-weight: bold;
-    }
-
-    /* Info section */
-    .info-section {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.cafeteria-info {
+    padding: 20px;
     text-align: center;
-    }
+    color: white;
+}
 
-    .info-section h3 {
-    color: var(--primary);
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    }
+.cafeteria-info h3 {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
 
-    .horarios-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    }
+.cafeteria-info p {
+    font-size: 1.2rem;
+}
 
-    .horario-item {
-    background: var(--light-gray);
-    padding: 1rem;
-    border-radius: 8px;
-    font-size: 1rem;
-    }
+/* Colores específicos para cada cafetería */
+.cafeteria-card.cafe-1 {
+    background-color: var(--cafeteria1-color);
+    animation: pulse-cafeteria2 3s infinite alternate;
+}
 
-    /* Vista del menú */
-    .menu-view {
+.cafeteria-card.cafe-1:hover {
+    background-color: var(--cafeteria1-dark);
+}
+
+.cafeteria-card.cafe-2 {
+    background-color: var(--cafeteria2-color);
+    animation: pulse-cafeteria2 3s infinite alternate;
+}
+
+.cafeteria-card.cafe-2:hover {
+    background-color: var(--cafeteria2-dark);
+}
+
+.cafeteria-card.cafe-3 {
+    background-color: var(--cafeteria3-color);
+    animation: pulse-cafeteria2 3s infinite alternate;
+}
+
+.cafeteria-card.cafe-3:hover {
+    background-color: var(--cafeteria3-dark);
+}
+
+/* Animación pulse */
+@keyframes pulse-cafeteria2 {
+    0% { opacity: 0.9; }
+    100% { opacity: 1; }
+}
+
+/* Vista del menú */
+.menu-view {
     max-width: 1200px;
     margin: 0 auto;
     padding: 1rem;
-    }
+}
 
-    .menu-header {
-    background: white;
+.menu-header {
+    background: linear-gradient(12deg, var(--theme-color, var(--primary)), var(--theme-dark, var(--primary-dark)));
     border-radius: 12px;
-    padding: 1.5rem 2rem;
+    padding: 0.6rem 2rem;
     margin-bottom: 2rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
-    }
+    color: white;
+}
 
-    .back-button {
-    background: var(--gray);
-    color: var(--text-dark);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-size: 1rem;
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 25px;
     cursor: pointer;
     transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    }
+    color: white;
+    text-decoration: none;
+}
 
-    .back-button:hover {
-    background: #d0d0d0;
-    transform: translateX(-2px);
-    }
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateX(-5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
 
-    .cafeteria-info h1 {
-    color: var(--primary);
+.cafeteria-info h1 {
+    color: white;
     font-size: 1.8rem;
     margin: 0;
-    }
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
 
-    .cafeteria-info p {
-    color: var(--text-dark);
+.cafeteria-info p {
+    color: rgba(255, 255, 255, 0.9);
     margin: 0.5rem 0 0 0;
     font-size: 1.1rem;
-    }
+}
 
-    .cart-toggle-btn {
-    background: var(--primary);
+.cart-toggle-btn {
+    background: rgba(255, 255, 255, 0.2);
     color: white;
-    border: none;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    }
+    font-weight: 600;
+}
 
-    .cart-toggle-btn:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    }
+.cart-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
 
-    .menu-content {
+.menu-content {
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    }
+}
 
-    /* Categorías del menú */
-    .menu-category {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+/* Categorías del menú */
+.menu-category {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
 
-    .menu-category h3 {
-    color: var(--primary);
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--primary);
-    }
+.menu-category h3 {
+    color: var(--theme-color, var(--dark));
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 2px solid var(--theme-color, var(--primary));
+    padding-bottom: 10px;
+}
 
-    .menu-items {
+.menu-items {
     display: grid;
-    gap: 1.5rem;
-    }
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+}
 
-    .menu-item {
+.menu-item {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 1.5rem;
-    border: 1px solid var(--gray);
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-    }
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
 
-    .menu-item:hover {
-    border-color: var(--primary);
-    box-shadow: 0 2px 8px rgba(123, 31, 162, 0.1);
-    }
+.menu-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+}
 
-    .menu-item-details {
+.menu-item-image {
+    width: 120px;
+    min-width: 120px;
+    height: 120px;
+    overflow: hidden;
+    position: relative;
+}
+
+.menu-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.menu-item:hover .menu-item-image img {
+    transform: scale(1.1);
+}
+
+.menu-item-details {
+    padding: 15px;
     flex: 1;
-    }
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
 
-    .menu-item-details h4 {
+.menu-item-details h4 {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
     color: var(--text-dark);
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
-    }
+}
 
-    .menu-item-details p {
+.menu-item-details p {
+    font-size: 0.9rem;
     color: #666;
-    margin-bottom: 1rem;
-    line-height: 1.4;
-    }
+    margin-bottom: 15px;
+    flex-grow: 1;
+}
 
-    .price-add {
+.price-add {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-    }
+}
 
-    .price {
-    font-size: 1.3rem;
+.price {
     font-weight: bold;
-    color: var(--primary);
-    }
+    color: var(--theme-color, var(--primary));
+    font-size: 1.3rem;
+}
 
-    .add-to-cart-btn {
-    background: var(--primary);
+.add-to-cart-btn {
+    background: linear-gradient(5deg, var(--theme-dark));
     color: white;
+    margin: 10px;
     border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
+    padding: 8px 15px;
+    border-radius: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
-    white-space: nowrap;
-    }
+    font-size: 0.9rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
 
-    .add-to-cart-btn:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    }
+.add-to-cart-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
 
-    .add-to-cart-btn:active {
-    transform: translateY(0);
-    }
-
-    /* Error container */
-    .error-container {
+/* Error container */
+.error-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 60vh;
     text-align: center;
-    }
+}
 
-    .error-container h2 {
+.error-container h2 {
     color: var(--text-dark);
     margin-bottom: 1rem;
-    }
+}
 
-    /* Responsive */
-    @media (max-width: 768px) {
-    .menu-main {
-        padding: 1rem;
+/* Responsive */
+@media (max-width: 768px) {
+    .cafeterias-container {
+        flex-direction: column;
+        gap: 20px;
+        padding: 15px;
     }
     
-    .selection-header h1 {
-        font-size: 2rem;
+    .cafeteria-card {
+        min-width: auto;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    
+    .cafeteria-image {
+        height: 200px;
+    }
+    
+    .cafeteria-info h3 {
+        font-size: 1.5rem;
+    }
+    
+    .cafeteria-info p {
+        font-size: 1rem;
     }
     
     .selection-title {
-        font-size: 1.1rem;
-    }
-    
-    .cafeterias-selection-container {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        font-size: 1.3rem;
+        padding: 0 1rem;
     }
     
     .menu-header {
@@ -352,14 +393,18 @@
         text-align: center;
     }
     
-    .cafeteria-info h1 {
-        font-size: 1.5rem;
+    .menu-items {
+        grid-template-columns: 1fr;
     }
     
     .menu-item {
         flex-direction: column;
-        align-items: stretch;
-        gap: 1rem;
+    }   
+
+    
+    .menu-item-image {
+        width: 100%;
+        height: 200px;
     }
     
     .price-add {
@@ -367,8 +412,4 @@
         align-items: stretch;
         gap: 0.5rem;
     }
-    
-    .horarios-grid {
-        grid-template-columns: 1fr;
-    }
-    }
+}

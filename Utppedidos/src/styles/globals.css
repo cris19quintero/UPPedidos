@@ -5,7 +5,7 @@
   --primary-dark: #5e1687;
   --white: #ffffff;
   --light-gray: #f5f5f5;
-  --gray: #e0e0e0;
+  --gray: #f7f7f7;
   --text-dark: #333333;
 }
 
@@ -42,46 +42,27 @@ body.login-page #root {
   align-items: center;
 }
 
-  .navbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 30px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-  }
-        .nav-buttons {
-            display: flex;
-            gap: 20px;
-        }
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 30px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+    }
+          .nav-buttons {
+              display: flex;
+              gap: 20px;
+          }
 
-        .nav-button {
-            text-decoration: none;
-            position: relative;
-            border-radius: 50%;
-        }
+          .nav-button {
+              text-decoration: none;
+              position: relative;
+              border-radius: 50%;
+          }
 
 
 
-.cafeterias-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  padding: 2rem;
-}
-
-.cafeteria-card {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  cursor: pointer;
-  transition: transform 0.3s;
-}
-
-.cafeteria-card:hover {
-  transform: translateY(-5px);
-}
 
 .menu-category {
   background: white;
@@ -91,6 +72,79 @@ body.login-page #root {
 }
 
 .menu-item {
+  background-color: var(--gray);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--gray);
+}
+/* Estilos para el modal del carrito */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+.modal-header {
+  padding: 20px;
+  background: linear-gradient(34deg, var(--primary), var(--primary-light));
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.close-btn:hover {
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  color: white;
+}
+p{
+  color: #333333;
+}
+.cart-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #333333;
+}
+
+.cart-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -98,27 +152,71 @@ body.login-page #root {
   border-bottom: 1px solid var(--gray);
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+.cart-item:last-child {
+  border-bottom: none;
 }
 
-.modal-content {
-  background: white;
+.cart-item-info {
+  flex: 1;
+}
+
+.cart-item-name {
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 0.25rem;
+}
+
+.cart-item-price {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.cart-item-remove {
+  background: #ff4757;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cart-item-remove:hover {
+  background: #ff3742;
+  transform: translateY(-1px);
+}
+
+.cart-total {
+  background: var(--light-gray);
+  padding: 1rem;
   border-radius: 8px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.checkout-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.checkout-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 2px solid var(--primary);
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
 }
 
 .btn {
