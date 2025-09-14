@@ -1,0 +1,66 @@
+{
+  "name": "utpedidos-backend",
+  "version": "1.0.0",
+  "description": "Backend API para UTPedidos - Sistema de pedidos de cafeterías UTP",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "db:init": "node scripts/initDatabase.js",
+    "db:seed": "node scripts/seedDatabase.js",
+    "db:reset": "node scripts/resetDatabase.js"
+  },
+  "keywords": [
+    "express",
+    "mysql",
+    "api",
+    "food-delivery",
+    "university",
+    "cafeteria",
+    "orders"
+  ],
+  "author": "UTP Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0",
+    "express-validator": "^7.0.1",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.7",
+    "uuid": "^9.0.1",
+    "moment": "^2.29.4",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/utpedidos-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/utpedidos-backend/issues"
+  },
+  "homepage": "https://github.com/tu-usuario/utpedidos-backend#readme"
+}
