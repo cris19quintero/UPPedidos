@@ -1,143 +1,268 @@
-// controllers/orderController.js - Controlador de pedidos
-const { executeQuery, executeTransaction } = require('../config/database');
+// ===== controllers/orderController.js - Migrado a Firebase =====
+const { getDB, generateId, serverTimestamp, runTransaction } = require('../config/database');
+const { successResponse, errorResponse } = require('../utils/helpers');
 
-// Crear un nuevo pedido
+// Crear pedido desde carrito
+const createOrderFromCart = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { metodo_pago, observaciones, tipo_pedido = 'normal' } = req.body;
+        const db = getDB();
+
+        if (!metodo_pago || !['efectivo', 'tarjeta', 'transferencia'].includes(metodo_pago)) {
+            const { response, statusCode } = errorResponse('Método de pago inválido');
+            return res.status(statusCode).json(response);
+        }
+
+        let pedidoId;
+        let pedidoData;
+
+        await runTransaction(async (transaction) => {
+            // Buscar carrito activo del usuario
+            const carritoQuery = await db.collection('carritos')
+                .where('id_usuario', '==', userId)
+                .where('activo', '==', true)
+                .limit(1)
+                .get();
+
+            if (carritoQuery.empty) {
+                throw new Error('No tienes un carrito activo');
+            }
+
+            const carritoDoc = carritoQuery.docs[0];
+            const carritoData = carritoDoc.data();
+
+            // Obtener items del carrito
+            const itemsSnapshot = await carritoDoc.ref.collection('items').get();
+            
+            if (itemsSnapshot.empty) {
+                throw new Error('El carrito está vacío');
+            }
+
+            // Verificar productos y calcular total
+            const items = [];
+            let total = 0;
+
+            for (const itemDoc of itemsSnapshot.docs) {
+                const item = itemDoc.data();
+                
+                // Verificar que el producto sigue activo
+                const productoRef = db.collection('productos').doc(item.id_producto);
+                const productoDoc = await transaction.get(productoRef);
+                
+                if (!productoDoc.exists || !productoDoc.data().activo) {
+                    throw new Error(`El producto ${item.id_producto} ya no está disponible`);
+                }
+
+                const producto = productoDoc.data();
+                
+                // Verificar precio actual
+                if (producto.precio !== item.precio_unitario) {
+                    throw new Error(`El precio del producto "${producto.nombre}" ha cambiado. Actualiza tu carrito.`);
+                }
+
+                const itemData = {
+                    id_producto: item.id_producto,
+                    nombre: producto.nombre,
+                    cantidad: item.cantidad,
+                    precio_unitario: producto.precio,
+                    subtotal: item.subtotal,
+                    categoria: producto.categoria,
+                    horario: producto.horario
+                };
+
+                items.push(itemData);
+                total += item.subtotal;
+            }
+
+            // Verificar cafetería
+            const cafeteriaRef = db.collection('cafeterias').doc(carritoData.id_cafeteria);
+            const cafeteriaDoc = await transaction.get(cafeteriaRef);
+            
+            if (!cafeteriaDoc.exists || !cafeteriaDoc.data().activa) {
+                throw new Error('La cafetería no está disponible');
+            }
+
+            // Crear pedido
+            pedidoId = generateId();
+            const tiempoEstimado = calcularTiempoEstimado(items);
+            
+            pedidoData = {
+                id_pedido: pedidoId,
+                id_usuario: userId,
+                id_cafeteria: carritoData.id_cafeteria,
+                estado: 'Pendiente',
+                total,
+                metodo_pago,
+                tipo_pedido,
+                observaciones: observaciones || '',
+                fecha_pedido: serverTimestamp(),
+                fecha_estimada: new Date(Date.now() + (tiempoEstimado * 60000)), // minutos a ms
+                tiempo_estimado: tiempoEstimado,
+                items_count: items.length,
+                cafeteria_nombre: cafeteriaDoc.data().nombre
+            };
+
+            const pedidoRef = db.collection('pedidos').doc(pedidoId);
+            transaction.set(pedidoRef, pedidoData);
+
+            // Agregar items del pedido como subcolección
+            items.forEach((item, index) => {
+                const itemRef = pedidoRef.collection('items').doc(`item_${index}`);
+                transaction.set(itemRef, {
+                    ...item,
+                    id_item: `item_${index}`,
+                    fecha_agregado: serverTimestamp()
+                });
+            });
+
+            // Desactivar carrito
+            transaction.update(carritoDoc.ref, { activo: false });
+
+            // Actualizar estadísticas del producto (opcional)
+            items.forEach(item => {
+                const productoRef = db.collection('productos').doc(item.id_producto);
+                transaction.update(productoRef, {
+                    ventas_totales: db.FieldValue.increment(item.cantidad),
+                    pedidos_count: db.FieldValue.increment(1),
+                    ultima_venta: serverTimestamp()
+                });
+            });
+        });
+
+        const { response } = successResponse('Pedido creado correctamente', {
+            pedido: pedidoData,
+            numero_pedido: pedidoId,
+            estado: 'Pendiente'
+        });
+        res.status(201).json(response);
+
+    } catch (error) {
+        console.error('Error creando pedido:', error);
+        const { response, statusCode } = errorResponse('Error creando el pedido', error);
+        res.status(statusCode).json(response);
+    }
+};
+
+// Crear pedido directo (sin carrito)
 const createOrder = async (req, res) => {
     try {
         const userId = req.user.id;
-        const {
-            id_cafeteria,
-            items,
-            metodo_pago = 'efectivo',
-            tipo_pedido = 'normal',
-            observaciones = '',
-            notas = ''
-        } = req.body;
-        
-        // Validaciones básicas
-        if (!id_cafeteria || !items || !Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({
-                error: 'Datos inválidos',
-                message: 'ID de cafetería e items son requeridos'
-            });
+        const { items, metodo_pago, observaciones, tipo_pedido = 'normal' } = req.body;
+        const db = getDB();
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            const { response, statusCode } = errorResponse('Items requeridos');
+            return res.status(statusCode).json(response);
         }
-        
-        // Verificar que la cafetería existe y está activa
-        const cafeteria = await executeQuery(
-            'SELECT id_cafeteria, nombre, activa FROM Cafeterias WHERE id_cafeteria = ?',
-            [id_cafeteria]
-        );
-        
-        if (cafeteria.length === 0) {
-            return res.status(404).json({
-                error: 'Cafetería no encontrada',
-                message: 'La cafetería especificada no existe'
-            });
+
+        if (!metodo_pago || !['efectivo', 'tarjeta', 'transferencia'].includes(metodo_pago)) {
+            const { response, statusCode } = errorResponse('Método de pago inválido');
+            return res.status(statusCode).json(response);
         }
-        
-        if (!cafeteria[0].activa) {
-            return res.status(400).json({
-                error: 'Cafetería cerrada',
-                message: 'La cafetería no está disponible en este momento'
-            });
-        }
-        
-        // Validar y obtener información de productos
-        const productIds = items.map(item => item.id_producto);
-        const products = await executeQuery(
-            `SELECT id_producto, nombre, precio, activo 
-             FROM Productos 
-             WHERE id_producto IN (${productIds.map(() => '?').join(',')}) 
-               AND id_cafeteria = ? AND activo = TRUE`,
-            [...productIds, id_cafeteria]
-        );
-        
-        if (products.length !== items.length) {
-            return res.status(400).json({
-                error: 'Productos inválidos',
-                message: 'Algunos productos no están disponibles o no pertenecen a esta cafetería'
-            });
-        }
-        
-        // Crear mapa de productos para fácil acceso
-        const productMap = {};
-        products.forEach(product => {
-            productMap[product.id_producto] = product;
-        });
-        
-        // Calcular total y preparar detalles del pedido
-        let total = 0;
-        const orderDetails = [];
-        
-        for (const item of items) {
-            const product = productMap[item.id_producto];
-            const cantidad = parseInt(item.cantidad) || 1;
-            
-            if (cantidad <= 0 || cantidad > 50) {
-                return res.status(400).json({
-                    error: 'Cantidad inválida',
-                    message: 'La cantidad debe ser entre 1 y 50'
+
+        let pedidoId;
+        let pedidoData;
+
+        await runTransaction(async (transaction) => {
+            // Verificar productos y calcular total
+            const productosData = [];
+            let total = 0;
+            let id_cafeteria;
+
+            for (const item of items) {
+                const productoRef = db.collection('productos').doc(item.id_producto);
+                const productoDoc = await transaction.get(productoRef);
+                
+                if (!productoDoc.exists || !productoDoc.data().activo) {
+                    throw new Error(`Producto ${item.id_producto} no encontrado o inactivo`);
+                }
+                
+                const producto = productoDoc.data();
+                
+                if (!id_cafeteria) {
+                    id_cafeteria = producto.id_cafeteria;
+                } else if (id_cafeteria !== producto.id_cafeteria) {
+                    throw new Error('Todos los productos deben ser de la misma cafetería');
+                }
+                
+                const subtotal = producto.precio * item.cantidad;
+                total += subtotal;
+                
+                productosData.push({
+                    id_producto: item.id_producto,
+                    nombre: producto.nombre,
+                    cantidad: item.cantidad,
+                    precio_unitario: producto.precio,
+                    subtotal,
+                    categoria: producto.categoria,
+                    horario: producto.horario
                 });
             }
+
+            // Verificar cafetería
+            const cafeteriaRef = db.collection('cafeterias').doc(id_cafeteria);
+            const cafeteriaDoc = await transaction.get(cafeteriaRef);
             
-            const precio_unitario = parseFloat(product.precio);
-            const subtotal = precio_unitario * cantidad;
-            
-            total += subtotal;
-            
-            orderDetails.push({
-                id_producto: item.id_producto,
-                cantidad: cantidad,
-                precio_unitario: precio_unitario,
-                subtotal: subtotal
-            });
-        }
-        
-        // Agregar cargo extra si es tipo express
-        if (tipo_pedido === 'express') {
-            total += 1.00; // Cargo de $1 por pedido express
-        }
-        
-        // Crear transacción para insertar pedido y detalles
-        const transactionOperations = [
-            {
-                query: `INSERT INTO Pedidos (
-                    id_usuario, id_cafeteria, fecha_pedido, estado, total, notas,
-                    metodo_pago, tipo_pedido, observaciones
-                ) VALUES (?, ?, NOW(), 'Pendiente', ?, ?, ?, ?, ?)`,
-                params: [userId, id_cafeteria, total, notas, metodo_pago, tipo_pedido, observaciones]
+            if (!cafeteriaDoc.exists || !cafeteriaDoc.data().activa) {
+                throw new Error('Cafetería no encontrada o inactiva');
             }
-        ];
-        
-        // Ejecutar transacción
-        const [orderResult] = await executeTransaction(transactionOperations);
-        const orderId = orderResult.insertId;
-        
-        // Insertar detalles del pedido
-        const detailOperations = orderDetails.map(detail => ({
-            query: `INSERT INTO DetallePedidos (
-                id_pedido, id_producto, cantidad, precio_unitario, subtotal
-            ) VALUES (?, ?, ?, ?, ?)`,
-            params: [orderId, detail.id_producto, detail.cantidad, detail.precio_unitario, detail.subtotal]
-        }));
-        
-        await executeTransaction(detailOperations);
-        
-        // Obtener el pedido completo creado
-        const newOrder = await getFullOrderById(orderId);
-        
-        res.status(201).json({
-            success: true,
-            message: 'Pedido creado exitosamente',
-            data: newOrder
+
+            // Crear pedido
+            pedidoId = generateId();
+            const tiempoEstimado = calcularTiempoEstimado(productosData);
+            
+            pedidoData = {
+                id_pedido: pedidoId,
+                id_usuario: userId,
+                id_cafeteria,
+                estado: 'Pendiente',
+                total,
+                metodo_pago,
+                tipo_pedido,
+                observaciones: observaciones || '',
+                fecha_pedido: serverTimestamp(),
+                fecha_estimada: new Date(Date.now() + (tiempoEstimado * 60000)),
+                tiempo_estimado: tiempoEstimado,
+                items_count: productosData.length,
+                cafeteria_nombre: cafeteriaDoc.data().nombre
+            };
+
+            const pedidoRef = db.collection('pedidos').doc(pedidoId);
+            transaction.set(pedidoRef, pedidoData);
+
+            // Agregar items del pedido
+            productosData.forEach((item, index) => {
+                const itemRef = pedidoRef.collection('items').doc(`item_${index}`);
+                transaction.set(itemRef, {
+                    ...item,
+                    id_item: `item_${index}`,
+                    fecha_agregado: serverTimestamp()
+                });
+            });
+
+            // Actualizar estadísticas del producto
+            productosData.forEach(item => {
+                const productoRef = db.collection('productos').doc(item.id_producto);
+                transaction.update(productoRef, {
+                    ventas_totales: db.FieldValue.increment(item.cantidad),
+                    pedidos_count: db.FieldValue.increment(1),
+                    ultima_venta: serverTimestamp()
+                });
+            });
         });
-        
+
+        const { response } = successResponse('Pedido creado correctamente', {
+            pedido: pedidoData,
+            numero_pedido: pedidoId,
+            estado: 'Pendiente'
+        });
+        res.status(201).json(response);
+
     } catch (error) {
         console.error('Error creando pedido:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'Error creando el pedido'
-        });
+        const { response, statusCode } = errorResponse('Error creando el pedido', error);
+        res.status(statusCode).json(response);
     }
 };
 
@@ -145,335 +270,194 @@ const createOrder = async (req, res) => {
 const getUserOrders = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { estado, page = 1, limit = 10 } = req.query;
-        
-        const offset = (page - 1) * limit;
-        
-        let whereClause = 'WHERE p.id_usuario = ?';
-        let queryParams = [userId];
-        
+        const { estado, limit = 20, page = 1 } = req.query;
+        const db = getDB();
+
+        let pedidosQuery = db.collection('pedidos')
+            .where('id_usuario', '==', userId)
+            .orderBy('fecha_pedido', 'desc');
+
         if (estado) {
-            whereClause += ' AND p.estado = ?';
-            queryParams.push(estado);
+            pedidosQuery = pedidosQuery.where('estado', '==', estado);
         }
+
+        // Aplicar paginación
+        const offset = (page - 1) * limit;
+        if (offset > 0) {
+            // Para paginación real necesitarías implementar cursor-based pagination
+            // Por simplicidad, limitamos los resultados
+            pedidosQuery = pedidosQuery.limit(parseInt(limit));
+        } else {
+            pedidosQuery = pedidosQuery.limit(parseInt(limit));
+        }
+
+        const pedidosSnapshot = await pedidosQuery.get();
         
-        const orders = await executeQuery(
-            `SELECT 
-                p.id_pedido, p.estado, p.total, p.fecha_pedido, p.notas,
-                p.metodo_pago, p.tipo_pedido, p.observaciones,
-                c.id_cafeteria, c.nombre as cafeteria_nombre, c.edificio
-             FROM Pedidos p
-             JOIN Cafeterias c ON p.id_cafeteria = c.id_cafeteria
-             ${whereClause}
-             ORDER BY p.fecha_pedido DESC
-             LIMIT ? OFFSET ?`,
-            [...queryParams, parseInt(limit), offset]
-        );
-        
-        // Obtener detalles para cada pedido
-        const ordersWithDetails = await Promise.all(
-            orders.map(async (order) => {
-                const items = await executeQuery(
-                    `SELECT 
-                        dp.cantidad, dp.precio_unitario, dp.subtotal,
-                        pr.id_producto, pr.nombre, pr.descripcion, pr.categoria, pr.imagen
-                     FROM DetallePedidos dp
-                     JOIN Productos pr ON dp.id_producto = pr.id_producto
-                     WHERE dp.id_pedido = ?`,
-                    [order.id_pedido]
-                );
-                
-                return {
-                    id_pedido: order.id_pedido,
-                    estado: order.estado,
-                    total: parseFloat(order.total),
-                    fecha_pedido: order.fecha_pedido,
-                    metodo_pago: order.metodo_pago,
-                    tipo_pedido: order.tipo_pedido,
-                    observaciones: order.observaciones,
-                    notas: order.notas,
-                    cafeteria_info: {
-                        id_cafeteria: order.id_cafeteria,
-                        nombre: order.cafeteria_nombre,
-                        edificio: order.edificio
-                    },
-                    items: items.map(item => ({
-                        id_producto: item.id_producto,
-                        nombre: item.nombre,
-                        descripcion: item.descripcion,
-                        categoria: item.categoria,
-                        imagen: item.imagen,
-                        cantidad: item.cantidad,
-                        precio_unitario: parseFloat(item.precio_unitario),
-                        subtotal: parseFloat(item.subtotal)
-                    }))
-                };
-            })
-        );
-        
-        // Contar total para paginación
-        const [totalCount] = await executeQuery(
-            `SELECT COUNT(*) as count FROM Pedidos p ${whereClause}`,
-            queryParams.slice(0, -2)
-        );
-        
-        res.json({
-            success: true,
-            data: ordersWithDetails,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: totalCount[0].count,
-                pages: Math.ceil(totalCount[0].count / limit)
+        const pedidos = [];
+        for (const pedidoDoc of pedidosSnapshot.docs) {
+            const pedido = { id: pedidoDoc.id, ...pedidoDoc.data() };
+            
+            // Obtener items del pedido
+            const itemsSnapshot = await pedidoDoc.ref.collection('items').get();
+            pedido.items = itemsSnapshot.docs.map(doc => doc.data());
+            
+            // Convertir timestamps
+            if (pedido.fecha_pedido) {
+                pedido.fecha_pedido = pedido.fecha_pedido.toDate();
             }
+            if (pedido.fecha_estimada) {
+                pedido.fecha_estimada = new Date(pedido.fecha_estimada);
+            }
+            
+            pedidos.push(pedido);
+        }
+
+        const { response } = successResponse('Pedidos obtenidos correctamente', {
+            pedidos,
+            total: pedidos.length,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            filtros: { estado: estado || 'todos' }
         });
-        
+        res.json(response);
+
     } catch (error) {
-        console.error('Error obteniendo pedidos:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'Error obteniendo los pedidos'
-        });
+        console.error('Error obteniendo pedidos del usuario:', error);
+        const { response, statusCode } = errorResponse('Error obteniendo pedidos', error);
+        res.status(statusCode).json(response);
     }
 };
 
-// Obtener un pedido específico
+// Obtener pedido por ID
 const getOrderById = async (req, res) => {
     try {
+        const { id } = req.params;
         const userId = req.user.id;
-        const orderId = req.params.id;
-        
-        const order = await getFullOrderById(orderId, userId);
-        
-        if (!order) {
-            return res.status(404).json({
-                error: 'Pedido no encontrado',
-                message: 'El pedido no existe o no tienes permiso para verlo'
-            });
-        }
-        
-        res.json({
-            success: true,
-            data: order
-        });
-        
-    } catch (error) {
-        console.error('Error obteniendo pedido:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'Error obteniendo el pedido'
-        });
-    }
-};
+        const db = getDB();
 
-// Actualizar estado de pedido
-const updateOrderStatus = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const orderId = req.params.id;
-        const { estado } = req.body;
-        
-        // Estados válidos
-        const validStates = ['Pendiente', 'Por Retirar', 'Retirado', 'Finalizado', 'Cancelado', 'Expirado'];
-        
-        if (!estado || !validStates.includes(estado)) {
-            return res.status(400).json({
-                error: 'Estado inválido',
-                message: `Estados válidos: ${validStates.join(', ')}`
-            });
+        const pedidoDoc = await db.collection('pedidos').doc(id).get();
+
+        if (!pedidoDoc.exists) {
+            const { response, statusCode } = errorResponse('Pedido no encontrado', null, 404);
+            return res.status(statusCode).json(response);
         }
-        
-        // Verificar que el pedido existe y pertenece al usuario
-        const existingOrder = await executeQuery(
-            'SELECT id_pedido, estado FROM Pedidos WHERE id_pedido = ? AND id_usuario = ?',
-            [orderId, userId]
-        );
-        
-        if (existingOrder.length === 0) {
-            return res.status(404).json({
-                error: 'Pedido no encontrado',
-                message: 'El pedido no existe o no tienes permiso para modificarlo'
-            });
+
+        const pedido = { id: pedidoDoc.id, ...pedidoDoc.data() };
+
+        // Verificar que el pedido pertenece al usuario
+        if (pedido.id_usuario !== userId) {
+            const { response, statusCode } = errorResponse('No tienes acceso a este pedido', null, 403);
+            return res.status(statusCode).json(response);
         }
-        
-        const currentState = existingOrder[0].estado;
-        
-        // Validaciones de transición de estado
-        const allowedTransitions = {
-            'Pendiente': ['Por Retirar', 'Cancelado', 'Expirado'],
-            'Por Retirar': ['Retirado', 'Expirado'],
-            'Retirado': ['Finalizado'],
-            'Finalizado': [], // Estado final
-            'Cancelado': [], // Estado final
-            'Expirado': [] // Estado final
-        };
-        
-        if (!allowedTransitions[currentState].includes(estado)) {
-            return res.status(400).json({
-                error: 'Transición de estado inválida',
-                message: `No se puede cambiar de "${currentState}" a "${estado}"`
-            });
+
+        // Obtener items del pedido
+        const itemsSnapshot = await pedidoDoc.ref.collection('items').get();
+        pedido.items = itemsSnapshot.docs.map(doc => doc.data());
+
+        // Obtener información de la cafetería
+        const cafeteriaDoc = await db.collection('cafeterias').doc(pedido.id_cafeteria).get();
+        if (cafeteriaDoc.exists) {
+            pedido.cafeteria_info = {
+                nombre: cafeteriaDoc.data().nombre,
+                telefono: cafeteriaDoc.data().telefono,
+                edificio: cafeteriaDoc.data().edificio
+            };
         }
-        
-        // Actualizar estado
-        await executeQuery(
-            'UPDATE Pedidos SET estado = ? WHERE id_pedido = ?',
-            [estado, orderId]
-        );
-        
-        // Obtener pedido actualizado
-        const updatedOrder = await getFullOrderById(orderId);
-        
-        res.json({
-            success: true,
-            message: 'Estado del pedido actualizado correctamente',
-            data: updatedOrder
-        });
-        
+
+        // Convertir timestamps
+        if (pedido.fecha_pedido) {
+            pedido.fecha_pedido = pedido.fecha_pedido.toDate();
+        }
+        if (pedido.fecha_estimada) {
+            pedido.fecha_estimada = new Date(pedido.fecha_estimada);
+        }
+
+        const { response } = successResponse('Pedido obtenido correctamente', pedido);
+        res.json(response);
+
     } catch (error) {
-        console.error('Error actualizando estado del pedido:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'Error actualizando el estado del pedido'
-        });
+        console.error('Error obteniendo pedido por ID:', error);
+        const { response, statusCode } = errorResponse('Error obteniendo el pedido', error);
+        res.status(statusCode).json(response);
     }
 };
 
 // Cancelar pedido
 const cancelOrder = async (req, res) => {
     try {
+        const { id } = req.params;
         const userId = req.user.id;
-        const orderId = req.params.id;
-        const { razon = 'Cancelado por el usuario' } = req.body;
-        
-        // Verificar que el pedido existe y se puede cancelar
-        const order = await executeQuery(
-            'SELECT id_pedido, estado FROM Pedidos WHERE id_pedido = ? AND id_usuario = ?',
-            [orderId, userId]
-        );
-        
-        if (order.length === 0) {
-            return res.status(404).json({
-                error: 'Pedido no encontrado',
-                message: 'El pedido no existe o no tienes permiso para cancelarlo'
+        const db = getDB();
+
+        await runTransaction(async (transaction) => {
+            const pedidoRef = db.collection('pedidos').doc(id);
+            const pedidoDoc = await transaction.get(pedidoRef);
+
+            if (!pedidoDoc.exists) {
+                throw new Error('Pedido no encontrado');
+            }
+
+            const pedido = pedidoDoc.data();
+
+            // Verificar que el pedido pertenece al usuario
+            if (pedido.id_usuario !== userId) {
+                throw new Error('No tienes acceso a este pedido');
+            }
+
+            // Verificar que se puede cancelar
+            if (!['Pendiente', 'Confirmado'].includes(pedido.estado)) {
+                throw new Error('El pedido no se puede cancelar en su estado actual');
+            }
+
+            // Actualizar estado
+            transaction.update(pedidoRef, {
+                estado: 'Cancelado',
+                fecha_cancelacion: serverTimestamp(),
+                motivo_cancelacion: 'Cancelado por el usuario'
             });
-        }
-        
-        const currentState = order[0].estado;
-        
-        // Solo se pueden cancelar pedidos pendientes
-        if (currentState !== 'Pendiente') {
-            return res.status(400).json({
-                error: 'No se puede cancelar',
-                message: 'Solo se pueden cancelar pedidos en estado Pendiente'
-            });
-        }
-        
-        // Actualizar a cancelado
-        await executeQuery(
-            'UPDATE Pedidos SET estado = ?, notas = CONCAT(COALESCE(notas, ""), "\nCancelado: ", ?) WHERE id_pedido = ?',
-            ['Cancelado', razon, orderId]
-        );
-        
-        const updatedOrder = await getFullOrderById(orderId);
-        
-        res.json({
-            success: true,
-            message: 'Pedido cancelado correctamente',
-            data: updatedOrder
         });
-        
+
+        const { response } = successResponse('Pedido cancelado correctamente');
+        res.json(response);
+
     } catch (error) {
         console.error('Error cancelando pedido:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'Error cancelando el pedido'
-        });
+        const { response, statusCode } = errorResponse('Error cancelando el pedido', error);
+        res.status(statusCode).json(response);
     }
 };
 
-// Función auxiliar para obtener pedido completo
-const getFullOrderById = async (orderId, userId = null) => {
-    try {
-        let whereClause = 'WHERE p.id_pedido = ?';
-        let queryParams = [orderId];
+// Helper para calcular tiempo estimado
+const calcularTiempoEstimado = (items) => {
+    let tiempoBase = 10; // 10 minutos base
+    
+    items.forEach(item => {
+        // Agregar tiempo por cantidad
+        tiempoBase += item.cantidad * 2;
         
-        if (userId) {
-            whereClause += ' AND p.id_usuario = ?';
-            queryParams.push(userId);
+        // Tiempo adicional por categoría
+        switch (item.categoria) {
+            case 'Platos Principales':
+                tiempoBase += 8;
+                break;
+            case 'Bebidas Calientes':
+                tiempoBase += 3;
+                break;
+            case 'Postres':
+                tiempoBase += 5;
+                break;
+            default:
+                tiempoBase += 2;
         }
-        
-        const [order] = await executeQuery(
-            `SELECT 
-                p.id_pedido, p.id_usuario, p.estado, p.total, p.fecha_pedido, p.notas,
-                p.metodo_pago, p.tipo_pedido, p.observaciones,
-                c.id_cafeteria, c.nombre as cafeteria_nombre, c.edificio, c.telefono,
-                u.nombre as usuario_nombre, u.apellido as usuario_apellido, u.correo
-             FROM Pedidos p
-             JOIN Cafeterias c ON p.id_cafeteria = c.id_cafeteria
-             JOIN Usuarios u ON p.id_usuario = u.id_usuario
-             ${whereClause}`,
-            queryParams
-        );
-        
-        if (!order) {
-            return null;
-        }
-        
-        const items = await executeQuery(
-            `SELECT 
-                dp.cantidad, dp.precio_unitario, dp.subtotal,
-                pr.id_producto, pr.nombre, pr.descripcion, pr.categoria, pr.imagen
-             FROM DetallePedidos dp
-             JOIN Productos pr ON dp.id_producto = pr.id_producto
-             WHERE dp.id_pedido = ?`,
-            [orderId]
-        );
-        
-        return {
-            id_pedido: order.id_pedido,
-            estado: order.estado,
-            total: parseFloat(order.total),
-            fecha_pedido: order.fecha_pedido,
-            metodo_pago: order.metodo_pago,
-            tipo_pedido: order.tipo_pedido,
-            observaciones: order.observaciones,
-            notas: order.notas,
-            usuario: {
-                id_usuario: order.id_usuario,
-                nombre: order.usuario_nombre,
-                apellido: order.usuario_apellido,
-                correo: order.correo
-            },
-            cafeteria_info: {
-                id_cafeteria: order.id_cafeteria,
-                nombre: order.cafeteria_nombre,
-                edificio: order.edificio,
-                telefono: order.telefono
-            },
-            items: items.map(item => ({
-                id_producto: item.id_producto,
-                nombre: item.nombre,
-                descripcion: item.descripcion,
-                categoria: item.categoria,
-                imagen: item.imagen,
-                cantidad: item.cantidad,
-                precio_unitario: parseFloat(item.precio_unitario),
-                subtotal: parseFloat(item.subtotal)
-            }))
-        };
-        
-    } catch (error) {
-        console.error('Error obteniendo pedido completo:', error);
-        return null;
-    }
+    });
+
+    return Math.min(tiempoBase, 45); // Máximo 45 minutos
 };
 
 module.exports = {
+    createOrderFromCart,
     createOrder,
     getUserOrders,
     getOrderById,
-    updateOrderStatus,
-    cancelOrder,
-    getFullOrderById
+    cancelOrder
 };

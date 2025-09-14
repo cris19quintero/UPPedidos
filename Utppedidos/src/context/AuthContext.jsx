@@ -1,6 +1,6 @@
 // src/context/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import api from '../services/api';
+import api from '../services/backendApi';
 
 const AuthContext = createContext();
 

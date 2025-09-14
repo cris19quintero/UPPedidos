@@ -1,541 +1,515 @@
-// ================================================================
-// FIREBASE SETUP - PREPARADO PARA BACKEND API
-// ================================================================
-
-// src/utils/firebaseSetup.js
+// ===== src/utils/firebaseSetup.js - SOLO FRONTEND =====
+import { db } from '../config/firebase';
 import { 
-  collection, 
-  doc, 
-  setDoc, 
-  addDoc, 
-  serverTimestamp,
-  writeBatch
+    collection, 
+    doc, 
+    setDoc, 
+    getDoc,
+    getDocs,
+    writeBatch, 
+    serverTimestamp 
 } from 'firebase/firestore';
-import { db } from '../config/firebase.js';
 
-// ================================================================
-// DATOS ESTÁTICOS (SE PRELLENAN UNA SOLA VEZ)
-// ================================================================
-
-// Solo productos y cafeterías - datos que no cambiarán frecuentemente
-const cafeteriasEstaticas = [
-  {
-    id_cafeteria: 1,
-    nombre: 'Cafetería Edificio 1',
-    direccion: 'Edificio 1, Planta Baja',
-    edificio: 'Edificio 1',
-    imagen: '/imagenes/cafeteria1.png',
-    ubicacion: {
-      lat: 9.0348,
-      lng: -79.5453
+// Datos de las cafeterías
+const cafeteriasData = [
+    {
+        id: 'cafeteria_central',
+        nombre: 'Cafetería Central',
+        direccion: 'Edificio Central, Planta Baja',
+        edificio: 'Central',
+        telefono: '+507 560-3000 ext. 1234',
+        email: 'cafeteria.central@utp.ac.pa',
+        imagen: '/images/cafeterias/central.jpg',
+        descripcion: 'La cafetería principal del campus, ubicada en el corazón de la universidad.',
+        horario_desayuno_inicio: '07:00',
+        horario_desayuno_fin: '10:00',
+        horario_almuerzo_inicio: '11:30',
+        horario_almuerzo_fin: '15:00',
+        horario_cena_inicio: '17:00',
+        horario_cena_fin: '20:00',
+        activa: true
     },
-    horarios: {
-      desayuno: { inicio: '07:00', fin: '09:30' },
-      almuerzo: { inicio: '11:45', fin: '13:45' },
-      cena: { inicio: '16:30', fin: '19:00' }
+    {
+        id: 'cafeteria_ingenieria',
+        nombre: 'Cafetería de Ingeniería',
+        direccion: 'Edificio de Ingeniería, 1er Piso',
+        edificio: 'Ingeniería',
+        telefono: '+507 560-3000 ext. 1235',
+        email: 'cafeteria.ingenieria@utp.ac.pa',
+        imagen: '/images/cafeterias/ingenieria.jpg',
+        descripcion: 'Cafetería especializada para estudiantes de ingeniería.',
+        horario_desayuno_inicio: '07:30',
+        horario_desayuno_fin: '09:30',
+        horario_almuerzo_inicio: '12:00',
+        horario_almuerzo_fin: '14:30',
+        horario_cena_inicio: '17:30',
+        horario_cena_fin: '19:30',
+        activa: true
     },
-    activa: true,
-    telefono: '+507 123-4567',
-    email: 'cafeteria1@utp.ac.pa',
-    administrador: 'Administrador 1',
-    fechaCreacion: serverTimestamp()
-  },
-  {
-    id_cafeteria: 2,
-    nombre: 'Cafetería Central',
-    direccion: 'Edificio Central, 2do Piso',
-    edificio: 'Cafetería Central',
-    imagen: '/imagenes/cafeteria2.png',
-    ubicacion: {
-      lat: 9.0349,
-      lng: -79.5454
-    },
-    horarios: {
-      desayuno: { inicio: '07:00', fin: '09:30' },
-      almuerzo: { inicio: '11:45', fin: '13:45' },
-      cena: { inicio: '16:30', fin: '19:00' }
-    },
-    activa: true,
-    telefono: '+507 123-4568',
-    email: 'cafeteriacentral@utp.ac.pa',
-    administrador: 'Administrador 2',
-    fechaCreacion: serverTimestamp()
-  },
-  {
-    id_cafeteria: 3,
-    nombre: 'Cafetería Edificio 3',
-    direccion: 'Edificio 3, Planta Baja',
-    edificio: 'Edificio 3',
-    imagen: '/imagenes/cafeteria3.png',
-    ubicacion: {
-      lat: 9.0350,
-      lng: -79.5455
-    },
-    horarios: {
-      desayuno: { inicio: '07:30', fin: '10:00' },
-      almuerzo: { inicio: '12:00', fin: '14:00' },
-      cena: { inicio: '17:00', fin: '19:30' }
-    },
-    activa: true,
-    telefono: '+507 123-4569',
-    email: 'cafeteria3@utp.ac.pa',
-    administrador: 'Administrador 3',
-    fechaCreacion: serverTimestamp()
-  }
+    {
+        id: 'cafeteria_sistemas',
+        nombre: 'Café & Bytes',
+        direccion: 'Edificio de Sistemas, 2do Piso',
+        edificio: 'Sistemas',
+        telefono: '+507 560-3000 ext. 1236',
+        email: 'cafeteria.sistemas@utp.ac.pa',
+        imagen: '/images/cafeterias/sistemas.jpg',
+        descripcion: 'Un espacio moderno para estudiantes de tecnología.',
+        horario_desayuno_inicio: '08:00',
+        horario_desayuno_fin: '10:30',
+        horario_almuerzo_inicio: '11:45',
+        horario_almuerzo_fin: '15:15',
+        horario_cena_inicio: '17:00',
+        horario_cena_fin: '20:30',
+        activa: true
+    }
 ];
 
-// Productos estáticos - menú base que se puede actualizar desde admin
-const productosEstaticos = {
-  1: [
-    {
-      id_producto: 1,
-      id_cafeteria: 1,
-      nombre: 'Desayuno Panameño',
-      descripcion: 'Huevos, tortilla, queso, café',
-      precio: 4.50,
-      horario: 'Desayuno',
-      categoria: 'Desayunos',
-      activo: true,
-      imagen: '/imagenes/desayuno-panameno.jpg',
-      ingredientes: ['huevos', 'tortilla', 'queso', 'café'],
-      tiempo_preparacion: 15,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 2,
-      id_cafeteria: 1,
-      nombre: 'Sandwich Jamón y Queso',
-      descripcion: 'Pan tostado con jamón y queso',
-      precio: 3.00,
-      horario: 'Desayuno',
-      categoria: 'Desayunos',
-      activo: true,
-      imagen: '/imagenes/sandwich-jamon.jpg',
-      ingredientes: ['pan', 'jamón', 'queso'],
-      tiempo_preparacion: 8,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 3,
-      id_cafeteria: 1,
-      nombre: 'Bowl de Avena con Frutas',
-      descripcion: 'Avena, frutas frescas, miel',
-      precio: 2.75,
-      horario: 'Desayuno',
-      categoria: 'Desayunos',
-      activo: true,
-      imagen: '/imagenes/bowl-avena.jpg',
-      ingredientes: ['avena', 'frutas', 'miel'],
-      tiempo_preparacion: 10,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 4,
-      id_cafeteria: 1,
-      nombre: 'Pollo Guisado con Arroz',
-      descripcion: 'Pollo guisado, arroz, ensalada',
-      precio: 5.50,
-      horario: 'Almuerzo',
-      categoria: 'Almuerzos',
-      activo: true,
-      imagen: '/imagenes/pollo-guisado.jpg',
-      ingredientes: ['pollo', 'arroz', 'vegetales'],
-      tiempo_preparacion: 20,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 5,
-      id_cafeteria: 1,
-      nombre: 'Sopa de Pollo',
-      descripcion: 'Sopa casera con pollo y vegetales',
-      precio: 3.25,
-      horario: 'Cena',
-      categoria: 'Cenas',
-      activo: true,
-      imagen: '/imagenes/sopa-pollo.jpg',
-      ingredientes: ['pollo', 'vegetales', 'pasta'],
-      tiempo_preparacion: 12,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    }
-  ],
-  2: [
-    {
-      id_producto: 6,
-      id_cafeteria: 2,
-      nombre: 'Pancakes con Miel',
-      descripcion: 'Stack de pancakes con miel',
-      precio: 3.50,
-      horario: 'Desayuno',
-      categoria: 'Desayunos',
-      activo: true,
-      imagen: '/imagenes/pancakes.jpg',
-      ingredientes: ['harina', 'huevos', 'leche', 'miel'],
-      tiempo_preparacion: 12,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 7,
-      id_cafeteria: 2,
-      nombre: 'Sancocho de Gallina',
-      descripcion: 'Sancocho tradicional panameño',
-      precio: 6.50,
-      horario: 'Almuerzo',
-      categoria: 'Almuerzos',
-      activo: true,
-      imagen: '/imagenes/sancocho.jpg',
-      ingredientes: ['gallina', 'yuca', 'ñame', 'mazorca'],
-      tiempo_preparacion: 25,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 8,
-      id_cafeteria: 2,
-      nombre: 'Hamburguesa Clásica',
-      descripcion: 'Hamburguesa con papas fritas',
-      precio: 4.50,
-      horario: 'Cena',
-      categoria: 'Cenas',
-      activo: true,
-      imagen: '/imagenes/hamburguesa.jpg',
-      ingredientes: ['carne', 'pan', 'vegetales', 'papas'],
-      tiempo_preparacion: 15,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    }
-  ],
-  3: [
-    {
-      id_producto: 9,
-      id_cafeteria: 3,
-      nombre: 'Tostadas Con Tocino',
-      descripcion: 'Huevos revueltos, tostadas y tocino con jugo de naranja',
-      precio: 1.80,
-      horario: 'Desayuno',
-      categoria: 'Desayunos',
-      activo: true,
-      imagen: '/imagenes/tostadas-tocino.jpg',
-      ingredientes: ['huevos', 'tostadas', 'tocino', 'jugo'],
-      tiempo_preparacion: 10,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 10,
-      id_cafeteria: 3,
-      nombre: 'Arroz Con Pollo',
-      descripcion: 'Arroz con pollo en plancha, frijoles, ensalada y plátanos fritos',
-      precio: 1.75,
-      horario: 'Almuerzo',
-      categoria: 'Almuerzos',
-      activo: true,
-      imagen: '/imagenes/arroz-pollo.jpg',
-      ingredientes: ['arroz', 'pollo', 'frijoles', 'ensalada', 'plátano'],
-      tiempo_preparacion: 18,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    },
-    {
-      id_producto: 11,
-      id_cafeteria: 3,
-      nombre: 'Arroz con carne',
-      descripcion: 'Arroz blanco, frijoles, carne y ensalada de vegetales',
-      precio: 1.00,
-      horario: 'Cena',
-      categoria: 'Cenas',
-      activo: true,
-      imagen: '/imagenes/arroz-carne.jpg',
-      ingredientes: ['arroz', 'frijoles', 'carne', 'ensalada'],
-      tiempo_preparacion: 16,
-      disponible: true,
-      fechaCreacion: serverTimestamp()
-    }
-  ]
+// Productos por cafetería
+const productosData = {
+    cafeteria_central: [
+        {
+            nombre: 'Desayuno Típico Panameño',
+            descripcion: 'Huevos revueltos, salchicha, queso blanco, tortilla y café',
+            precio: 6.50,
+            categoria: 'Desayunos',
+            horario: 'desayuno',
+            imagen: '/images/productos/desayuno-tipico.jpg',
+            tiempo_preparacion: 15,
+            calorias: 650,
+            vegetariano: false,
+            ingredientes: ['huevos', 'salchicha', 'queso blanco', 'tortilla', 'café'],
+            activo: true
+        },
+        {
+            nombre: 'Sancocho de Gallina',
+            descripcion: 'Tradicional sancocho panameño con gallina, verduras y culantro',
+            precio: 8.75,
+            categoria: 'Platos Principales',
+            horario: 'almuerzo',
+            imagen: '/images/productos/sancocho.jpg',
+            tiempo_preparacion: 20,
+            calorias: 480,
+            vegetariano: false,
+            ingredientes: ['gallina', 'ñame', 'mazorca', 'culantro', 'ají chombo'],
+            activo: true
+        },
+        {
+            nombre: 'Arroz con Pollo',
+            descripcion: 'Arroz amarillo con pollo, verduras y sazón criolla',
+            precio: 7.25,
+            categoria: 'Platos Principales',
+            horario: 'almuerzo',
+            imagen: '/images/productos/arroz-pollo.jpg',
+            tiempo_preparacion: 18,
+            calorias: 520,
+            vegetariano: false,
+            ingredientes: ['arroz', 'pollo', 'achiote', 'pimientos', 'cebolla'],
+            activo: true
+        },
+        {
+            nombre: 'Café Geisha',
+            descripcion: 'Café premium panameño de la región de Boquete',
+            precio: 3.50,
+            categoria: 'Bebidas Calientes',
+            horario: 'todo_dia',
+            imagen: '/images/productos/cafe-geisha.jpg',
+            tiempo_preparacion: 5,
+            calorias: 5,
+            vegetariano: true,
+            ingredientes: ['café geisha', 'agua filtrada'],
+            activo: true
+        },
+        {
+            nombre: 'Tres Leches',
+            descripcion: 'Postre tradicional con tres tipos de leche y canela',
+            precio: 4.25,
+            categoria: 'Postres',
+            horario: 'todo_dia',
+            imagen: '/images/productos/tres-leches.jpg',
+            tiempo_preparacion: 5,
+            calorias: 380,
+            vegetariano: true,
+            ingredientes: ['leche condensada', 'leche evaporada', 'crema', 'bizcocho', 'canela'],
+            activo: true
+        }
+    ],
+    cafeteria_ingenieria: [
+        {
+            nombre: 'Burger Engineer',
+            descripcion: 'Hamburguesa doble con queso, bacon y papas fritas',
+            precio: 9.50,
+            categoria: 'Comida Rápida',
+            horario: 'almuerzo',
+            imagen: '/images/productos/burger-engineer.jpg',
+            tiempo_preparacion: 12,
+            calorias: 850,
+            vegetariano: false,
+            ingredientes: ['carne', 'queso', 'bacon', 'lechuga', 'tomate', 'papas'],
+            activo: true
+        },
+        {
+            nombre: 'Pizza Margarita',
+            descripcion: 'Pizza tradicional con salsa de tomate, mozzarella y albahaca',
+            precio: 8.00,
+            categoria: 'Comida Rápida',
+            horario: 'almuerzo',
+            imagen: '/images/productos/pizza-margarita.jpg',
+            tiempo_preparacion: 15,
+            calorias: 320,
+            vegetariano: true,
+            ingredientes: ['masa', 'salsa tomate', 'mozzarella', 'albahaca'],
+            activo: true
+        },
+        {
+            nombre: 'Empanadas de Pollo',
+            descripcion: 'Dos empanadas criollas rellenas de pollo guisado',
+            precio: 4.75,
+            categoria: 'Aperitivos',
+            horario: 'todo_dia',
+            imagen: '/images/productos/empanadas-pollo.jpg',
+            tiempo_preparacion: 8,
+            calorias: 450,
+            vegetariano: false,
+            ingredientes: ['masa', 'pollo', 'cebolla', 'pimientos', 'especias'],
+            activo: true
+        },
+        {
+            nombre: 'Smoothie Energético',
+            descripcion: 'Batido de frutas tropicales con proteína',
+            precio: 5.25,
+            categoria: 'Bebidas Frías',
+            horario: 'todo_dia',
+            imagen: '/images/productos/smoothie-energetico.jpg',
+            tiempo_preparacion: 5,
+            calorias: 280,
+            vegetariano: true,
+            ingredientes: ['mango', 'piña', 'proteína whey', 'leche', 'hielo'],
+            activo: true
+        }
+    ],
+    cafeteria_sistemas: [
+        {
+            nombre: 'Wrap de Programador',
+            descripcion: 'Tortilla integral con pollo, vegetales y salsa especial',
+            precio: 6.75,
+            categoria: 'Comida Saludable',
+            horario: 'almuerzo',
+            imagen: '/images/productos/wrap-programador.jpg',
+            tiempo_preparacion: 10,
+            calorias: 420,
+            vegetariano: false,
+            ingredientes: ['tortilla integral', 'pollo', 'lechuga', 'tomate', 'aguacate', 'salsa yogurt'],
+            activo: true
+        },
+        {
+            nombre: 'Ensalada de Quinoa',
+            descripcion: 'Quinoa con vegetales frescos, aguacate y vinagreta',
+            precio: 7.50,
+            categoria: 'Comida Saludable',
+            horario: 'almuerzo',
+            imagen: '/images/productos/ensalada-quinoa.jpg',
+            tiempo_preparacion: 8,
+            calorias: 350,
+            vegetariano: true,
+            ingredientes: ['quinoa', 'aguacate', 'tomate cherry', 'pepino', 'vinagreta'],
+            activo: true
+        },
+        {
+            nombre: 'Cold Brew Coffee',
+            descripcion: 'Café frío extraído en frío durante 12 horas',
+            precio: 4.00,
+            categoria: 'Bebidas Frías',
+            horario: 'todo_dia',
+            imagen: '/images/productos/cold-brew.jpg',
+            tiempo_preparacion: 3,
+            calorias: 10,
+            vegetariano: true,
+            ingredientes: ['café cold brew', 'hielo'],
+            activo: true
+        },
+        {
+            nombre: 'Açaí Bowl',
+            descripcion: 'Bowl de açaí con granola, frutas y miel',
+            precio: 6.25,
+            categoria: 'Comida Saludable',
+            horario: 'desayuno',
+            imagen: '/images/productos/acai-bowl.jpg',
+            tiempo_preparacion: 7,
+            calorias: 380,
+            vegetariano: true,
+            ingredientes: ['açaí', 'granola', 'plátano', 'fresas', 'miel'],
+            activo: true
+        }
+    ]
 };
 
-// ================================================================
-// FUNCIONES PARA CREAR SOLO DATOS ESTÁTICOS
-// ================================================================
+// Usuario de ejemplo
+const usuarioEjemplo = {
+    id: 'usuario_ejemplo',
+    nombre: 'Juan Carlos',
+    apellido: 'Rodríguez',
+    correo: 'juan.rodriguez@utp.ac.pa',
+    facultad: 'Ingeniería de Sistemas Computacionales',
+    telefono: '+507 6789-1234',
+    edificio_habitual: 'Sistemas',
+    carrera: 'Ingeniería de Sistemas',
+    semestre: 6,
+    cedula: '8-123-456',
+    activo: true
+};
 
-async function createCafeteriasEstaticas() {
-  console.log('🏢 Creando cafeterías estáticas...');
-  
-  try {
-    const batch = writeBatch(db);
-    
-    for (const cafeteria of cafeteriasEstaticas) {
-      const cafeteriaRef = doc(db, 'cafeterias', `cafeteria_${cafeteria.id_cafeteria}`);
-      batch.set(cafeteriaRef, cafeteria);
-    }
-    
-    await batch.commit();
-    console.log('✅ Cafeterías estáticas creadas');
-  } catch (error) {
-    console.error('❌ Error creando cafeterías:', error);
-  }
-}
-
-async function createProductosEstaticos() {
-  console.log('🍽️ Creando productos estáticos...');
-  
-  try {
-    for (const [cafeteriaId, productos] of Object.entries(productosEstaticos)) {
-      console.log(`   Creando productos para cafetería ${cafeteriaId}...`);
-      
-      for (const producto of productos) {
-        await addDoc(collection(db, 'productos'), producto);
-      }
-    }
-    console.log('✅ Productos estáticos creados');
-  } catch (error) {
-    console.error('❌ Error creando productos:', error);
-  }
-}
-
-// ================================================================
-// FUNCIONES PARA CREAR ESTRUCTURA VACÍA (LISTAS PARA API)
-// ================================================================
-
-async function createEmptyCollections() {
-  console.log('📋 Creando colecciones vacías para API...');
-  
-  try {
-    // Crear documentos de estructura/ejemplo que el backend puede usar como referencia
-    
-    // Estructura de usuarios (documento ejemplo)
-    const userStructure = {
-      _isExample: true,
-      _description: 'Estructura para usuarios - Backend debe crear usuarios reales aquí',
-      id_usuario: 'number',
-      nombre: 'string',
-      apellido: 'string',
-      correo: 'string - unique',
-      facultad: 'string',
-      telefono: 'string',
-      edificio_habitual: 'string (Edificio 1|Cafetería Central|Edificio 3)',
-      activo: 'boolean',
-      fecha_registro: 'timestamp',
-      rol: 'string (estudiante|admin)',
-      cedula: 'string',
-      carrera: 'string',
-      semestre: 'number',
-      estadisticas: {
-        totalPedidos: 'number',
-        totalGastado: 'number', 
-        cafeteriaFavorita: 'string'
-      }
-    };
-    await setDoc(doc(db, 'usuarios', '_structure_example'), userStructure);
-
-    // Crear colección de pedidos con documento temporal
-    const pedidoPlaceholder = {
-      _isTemporary: true,
-      _instruction: 'Este documento se creó para inicializar la colección. Se puede eliminar.',
-      _structure_example: {
-        id_pedido: 'auto-generated',
-        id_usuario: 'string (referencia a usuarios)',
-        id_cafeteria: 'number',
-        fecha_pedido: 'timestamp',
-        estado: 'string (Pendiente|Por Retirar|Retirado|Finalizado|Cancelado|Expirado)',
-        total: 'number',
-        notas: 'string (opcional)',
-        items: [
-          {
-            id_producto: 'number',
-            nombre: 'string',
-            precio_unitario: 'number',
-            cantidad: 'number',
-            subtotal: 'number'
-          }
-        ],
-        metodo_pago: 'string (efectivo|tarjeta|transferencia)',
-        tipo_pedido: 'string (normal|express)',
-        observaciones: 'string (opcional)'
-      }
-    };
-    await setDoc(doc(db, 'pedidos', '_init_collection'), pedidoPlaceholder);
-
-    // Crear colección de carrito con documento temporal
-    const carritoPlaceholder = {
-      _isTemporary: true,
-      _instruction: 'Este documento se creó para inicializar la colección. Se puede eliminar.',
-      _structure_example: {
-        id_carrito: 'auto-generated',
-        id_usuario: 'string (referencia a usuarios)',
-        id_cafeteria: 'number',
-        fecha_creacion: 'timestamp',
-        activo: 'boolean',
-        items: [
-          {
-            id_producto: 'number',
-            cantidad: 'number',
-            precio_unitario: 'number',
-            subtotal: 'number'
-          }
-        ],
-        total: 'number'
-      }
-    };
-    await setDoc(doc(db, 'carritos', '_init_collection'), carritoPlaceholder);
-
-    console.log('✅ Colecciones inicializadas correctamente');
-    console.log('📌 Las colecciones ahora existen y están listas para recibir datos reales');
-    console.log('🗑️ Los documentos "_init_collection" se pueden eliminar después del primer uso');
-  } catch (error) {
-    console.error('❌ Error creando colecciones:', error);
-  }
-}
-
-// ================================================================
-// API SERVICE PARA COMUNICACIÓN CON BACKEND
-// ================================================================
-
-class BackendAPIService {
-  constructor(baseURL = 'http://localhost:5000/api') {
-    this.baseURL = baseURL;
-  }
-
-  async request(endpoint, options = {}) {
+// Función principal para configurar la base de datos
+export const setupFirebaseDatabase = async () => {
     try {
-      const url = `${this.baseURL}${endpoint}`;
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        },
-        ...options
-      };
+        console.log('🚀 Iniciando configuración de Firebase...');
+        
+        // 1. Crear cafeterías
+        console.log('📍 Creando cafeterías...');
+        const cafeteriasBatch = writeBatch(db);
+        
+        for (const cafeteriaData of cafeteriasData) {
+            const cafeteriaRef = doc(db, 'cafeterias', cafeteriaData.id);
+            cafeteriasBatch.set(cafeteriaRef, {
+                ...cafeteriaData,
+                fecha_creacion: serverTimestamp(),
+                ultima_actualizacion: serverTimestamp()
+            });
+        }
+        
+        await cafeteriasBatch.commit();
+        console.log(`✅ ${cafeteriasData.length} cafeterías creadas`);
 
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+        // 2. Crear productos
+        console.log('🍽️ Creando productos...');
+        let productosCreados = 0;
+        
+        for (const [cafeteriaId, productos] of Object.entries(productosData)) {
+            console.log(`Creando productos para ${cafeteriaId}...`);
+            
+            const productosBatch = writeBatch(db);
+            
+            for (const producto of productos) {
+                const productoRef = doc(collection(db, 'productos'));
+                productosBatch.set(productoRef, {
+                    ...producto,
+                    id_cafeteria: cafeteriaId,
+                    fecha_creacion: serverTimestamp(),
+                    ultima_actualizacion: serverTimestamp(),
+                    ventas_totales: 0,
+                    pedidos_count: 0
+                });
+                productosCreados++;
+            }
+            
+            await productosBatch.commit();
+        }
+        
+        console.log(`✅ ${productosCreados} productos creados`);
 
-      return await response.json();
+        // 3. Crear usuario de ejemplo
+        console.log('👤 Creando usuario de ejemplo...');
+        const usuarioRef = doc(db, 'usuarios', usuarioEjemplo.id);
+        await setDoc(usuarioRef, {
+            ...usuarioEjemplo,
+            fecha_registro: serverTimestamp(),
+            ultima_actividad: serverTimestamp()
+        });
+        console.log('✅ Usuario de ejemplo creado');
+
+        // 4. Crear configuración general
+        console.log('🔧 Configurando sistema...');
+        const configRef = doc(db, 'configuracion', 'general');
+        await setDoc(configRef, {
+            version: '1.0.0',
+            fecha_instalacion: serverTimestamp(),
+            configurado: true,
+            total_cafeterias: cafeteriasData.length,
+            total_productos: productosCreados,
+            moneda: 'USD',
+            iva_incluido: true,
+            tiempo_limite_carrito: 30, // minutos
+            pedido_minimo: 5.00
+        });
+
+        console.log('🎉 ¡Base de datos configurada exitosamente!');
+        console.log(`📊 Resumen:`);
+        console.log(`   - ${cafeteriasData.length} cafeterías`);
+        console.log(`   - ${productosCreados} productos`);
+        console.log(`   - 1 usuario de ejemplo`);
+        console.log(`   - Configuración general establecida`);
+
+        return {
+            success: true,
+            cafeterias: cafeteriasData.length,
+            productos: productosCreados,
+            usuarios: 1
+        };
+
     } catch (error) {
-      console.error(`API Error [${endpoint}]:`, error);
-      throw error;
+        console.error('❌ Error configurando Firebase:', error);
+        throw new Error(`Error en configuración: ${error.message}`);
     }
-  }
+};
 
-  // Métodos para usuarios
-  async createUser(userData) {
-    return this.request('/usuarios', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
-  }
+// Función para probar la conexión
+export const testFirebaseConnection = async () => {
+    try {
+        console.log('🔍 Probando conexión con Firebase...');
+        
+        // Intentar leer la configuración
+        const configRef = doc(db, 'configuracion', 'general');
+        const configDoc = await getDoc(configRef);
+        
+        if (configDoc.exists()) {
+            console.log('✅ Conexión exitosa - Base de datos ya configurada');
+            const config = configDoc.data();
+            console.log('📋 Configuración actual:', config);
+            return true;
+        } else {
+            console.log('⚠️ Conexión exitosa pero base de datos no configurada');
+            return true;
+        }
+        
+    } catch (error) {
+        console.error('❌ Error probando conexión:', error);
+        return false;
+    }
+};
 
-  async getUserById(userId) {
-    return this.request(`/usuarios/${userId}`);
-  }
+// Función para verificar el estado del sistema
+export const verifySystemStatus = async () => {
+    try {
+        const status = {
+            cafeterias: 0,
+            productos: 0,
+            usuarios: 0,
+            configurado: false
+        };
 
-  async updateUser(userId, userData) {
-    return this.request(`/usuarios/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify(userData)
-    });
-  }
+        // Verificar configuración
+        const configRef = doc(db, 'configuracion', 'general');
+        const configDoc = await getDoc(configRef);
+        
+        if (configDoc.exists()) {
+            status.configurado = true;
+            const config = configDoc.data();
+            status.cafeterias = config.total_cafeterias || 0;
+            status.productos = config.total_productos || 0;
+        }
 
-  // Métodos para pedidos
-  async createPedido(pedidoData) {
-    return this.request('/pedidos', {
-      method: 'POST',
-      body: JSON.stringify(pedidoData)
-    });
-  }
+        // Contar documentos reales
+        const cafeteriasSnapshot = await getDocs(collection(db, 'cafeterias'));
+        status.cafeterias = cafeteriasSnapshot.size;
 
-  async getPedidosByUser(userId) {
-    return this.request(`/pedidos/usuario/${userId}`);
-  }
+        const productosSnapshot = await getDocs(collection(db, 'productos'));
+        status.productos = productosSnapshot.size;
 
-  async updatePedidoStatus(pedidoId, status) {
-    return this.request(`/pedidos/${pedidoId}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ estado: status })
-    });
-  }
+        const usuariosSnapshot = await getDocs(collection(db, 'usuarios'));
+        status.usuarios = usuariosSnapshot.size;
 
-  // Métodos para carrito
-  async addToCarrito(carritoData) {
-    return this.request('/carrito', {
-      method: 'POST',
-      body: JSON.stringify(carritoData)
-    });
-  }
+        return status;
+        
+    } catch (error) {
+        console.error('Error verificando estado:', error);
+        throw error;
+    }
+};
 
-  async getCarritoByUser(userId) {
-    return this.request(`/carrito/usuario/${userId}`);
-  }
+// Función para limpiar base de datos (solo para desarrollo)
+export const cleanDatabase = async () => {
+    try {
+        console.log('🧹 Limpiando base de datos...');
+        
+        const collections = ['cafeterias', 'productos', 'usuarios', 'carritos', 'pedidos', 'configuracion'];
+        let totalDeleted = 0;
+        
+        for (const collectionName of collections) {
+            const snapshot = await getDocs(collection(db, collectionName));
+            
+            if (!snapshot.empty) {
+                const batch = writeBatch(db);
+                
+                snapshot.docs.forEach(docSnapshot => {
+                    batch.delete(docSnapshot.ref);
+                });
+                
+                await batch.commit();
+                console.log(`🗑️ Colección ${collectionName} limpiada (${snapshot.size} documentos)`);
+                totalDeleted += snapshot.size;
+            }
+        }
+        
+        console.log(`✅ Base de datos limpiada completamente (${totalDeleted} documentos eliminados)`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error limpiando base de datos:', error);
+        throw error;
+    }
+};
 
-  async clearCarrito(userId) {
-    return this.request(`/carrito/usuario/${userId}`, {
-      method: 'DELETE'
-    });
-  }
+// Función para exportar datos
+export const exportDatabaseData = async () => {
+    try {
+        console.log('📥 Exportando datos...');
+        
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            cafeterias: [],
+            productos: [],
+            usuarios: [],
+            configuracion: null
+        };
 
-  // Métodos para productos (lectura)
-  async getProductosByCafeteria(cafeteriaId) {
-    return this.request(`/productos/cafeteria/${cafeteriaId}`);
-  }
+        // Exportar cafeterías
+        const cafeteriasSnapshot = await getDocs(collection(db, 'cafeterias'));
+        exportData.cafeterias = cafeteriasSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
-  async getProductosByHorario(horario) {
-    return this.request(`/productos/horario/${horario}`);
-  }
-}
+        // Exportar productos
+        const productosSnapshot = await getDocs(collection(db, 'productos'));
+        exportData.productos = productosSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
-// Instancia del servicio API
-export const backendAPI = new BackendAPIService();
+        // Exportar usuarios (sin contraseñas)
+        const usuariosSnapshot = await getDocs(collection(db, 'usuarios'));
+        exportData.usuarios = usuariosSnapshot.docs.map(doc => {
+            const data = doc.data();
+            delete data.contrasena; // Remover contraseña por seguridad
+            return {
+                id: doc.id,
+                ...data
+            };
+        });
 
-// ================================================================
-// FUNCIÓN PRINCIPAL - SOLO CREA DATOS ESTÁTICOS
-// ================================================================
+        // Exportar configuración
+        const configRef = doc(db, 'configuracion', 'general');
+        const configDoc = await getDoc(configRef);
+        if (configDoc.exists()) {
+            exportData.configuracion = configDoc.data();
+        }
 
-export async function setupFirebaseDatabase() {
-  console.log('🚀 Configurando base de datos (solo datos estáticos)...');
-  
-  try {
-    await createCafeteriasEstaticas();
-    await createProductosEstaticos();
-    await createEmptyCollections();
-    
-    console.log('🎉 ¡Base de datos configurada para backend!');
-    console.log('📊 Lo que se creó:');
-    console.log('   ✅ 3 Cafeterías con información completa');
-    console.log('   ✅ 11 Productos distribuidos por cafetería');
-    console.log('   ✅ Estructuras vacías para usuarios, pedidos y carritos');
-    console.log('   ✅ API service configurado para backend');
-    console.log('');
-    console.log('🔗 Endpoints del backend esperados:');
-    console.log('   POST /api/usuarios - Crear usuario');
-    console.log('   GET  /api/usuarios/:id - Obtener usuario');
-    console.log('   POST /api/pedidos - Crear pedido');
-    console.log('   GET  /api/pedidos/usuario/:userId - Obtener pedidos de usuario');
-    console.log('   POST /api/carrito - Agregar al carrito');
-    console.log('   GET  /api/productos/cafeteria/:id - Obtener productos');
-    
-    alert('¡Base de datos configurada para backend!\n\nSolo se crearon productos y cafeterías.\nLos usuarios y pedidos se manejarán vía API.');
-    
-  } catch (error) {
-    console.error('❌ Error en la configuración:', error);
-    alert('Error configurando la base de datos: ' + error.message);
-  }
-}
-
-export async function testFirebaseConnection() {
-  try {
-    const cafeteriasRef = collection(db, 'cafeterias');
-    console.log('🔍 Conexión con Firebase establecida correctamente');
-    return true;
-  } catch (error) {
-    console.error('❌ Error conectando con Firebase:', error);
-    return false;
-  }
-}
+        // Crear archivo para descarga
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = `utp-pedidos-backup-${new Date().toISOString().split('T')[0]}.json`;
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+        
+        console.log('✅ Datos exportados exitosamente');
+        return exportData;
+        
+    } catch (error) {
+        console.error('❌ Error exportando datos:', error);
+        throw error;
+    }
+};

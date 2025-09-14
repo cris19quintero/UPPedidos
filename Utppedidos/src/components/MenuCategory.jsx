@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useCart } from '../context/CartContext'
-import dataService from '../services/dataService'
+
 
 function MenuCategory({ categoria, items, cafeteriaId, isOpen = true }) {
   const { addToCart } = useCart()

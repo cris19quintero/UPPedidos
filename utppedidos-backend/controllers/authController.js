@@ -1,6 +1,6 @@
-// controllers/authController.js - Controlador de autenticación
+// ===== controllers/authController.js - Controlador de autenticación Firebase =====
 const bcrypt = require('bcryptjs');
-const { executeQuery } = require('../config/database');
+const { getDB, generateId, serverTimestamp } = require('../config/database');
 const { generateTokens, verifyRefreshToken } = require('../middleware/auth');
 
 // Registro de usuario
@@ -22,6 +22,7 @@ const register = async (req, res) => {
         // Validaciones básicas
         if (!nombre || !apellido || !correo || !contrasena) {
             return res.status(400).json({
+                success: false,
                 error: 'Datos requeridos',
                 message: 'Nombre, apellido, correo y contraseña son obligatorios'
             });
@@ -31,14 +32,16 @@ const register = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(correo)) {
             return res.status(400).json({
+                success: false,
                 error: 'Email inválido',
                 message: 'El formato del correo electrónico no es válido'
             });
         }
         
-        // Validar que sea correo de UTP (opcional)
+        // Validar que sea correo de UTP
         if (!correo.endsWith('@utp.ac.pa')) {
             return res.status(400).json({
+                success: false,
                 error: 'Email institucional requerido',
                 message: 'Debes usar tu correo institucional @utp.ac.pa'
             });
@@ -47,19 +50,22 @@ const register = async (req, res) => {
         // Validar contraseña
         if (contrasena.length < 6) {
             return res.status(400).json({
+                success: false,
                 error: 'Contraseña débil',
                 message: 'La contraseña debe tener al menos 6 caracteres'
             });
         }
         
-        // Verificar si el usuario ya existe
-        const existingUser = await executeQuery(
-            'SELECT id_usuario FROM Usuarios WHERE correo = ?',
-            [correo]
-        );
+        const db = getDB();
         
-        if (existingUser.length > 0) {
+        // Verificar si el usuario ya existe
+        const existingUserQuery = await db.collection('usuarios')
+            .where('correo', '==', correo)
+            .get();
+        
+        if (!existingUserQuery.empty) {
             return res.status(409).json({
+                success: false,
                 error: 'Usuario ya existe',
                 message: 'Ya existe un usuario registrado con este correo electrónico'
             });
@@ -69,34 +75,43 @@ const register = async (req, res) => {
         const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
         const hashedPassword = await bcrypt.hash(contrasena, saltRounds);
         
-        // Crear usuario
-        const result = await executeQuery(
-            `INSERT INTO Usuarios (
-                nombre, apellido, correo, contrasena, facultad, telefono, 
-                edificio_habitual, carrera, semestre, cedula, activo, fecha_registro
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, NOW())`,
-            [nombre, apellido, correo, hashedPassword, facultad, telefono, 
-             edificio_habitual, carrera, semestre, cedula]
-        );
+        // Generar ID único para el usuario
+        const userId = generateId();
         
-        const userId = result.insertId;
+        // Crear datos del usuario
+        const userData = {
+            id_usuario: userId,
+            nombre: nombre.trim(),
+            apellido: apellido.trim(),
+            correo: correo.toLowerCase().trim(),
+            contrasena: hashedPassword,
+            facultad: facultad ? facultad.trim() : null,
+            telefono: telefono ? telefono.trim() : null,
+            edificio_habitual: edificio_habitual ? edificio_habitual.trim() : null,
+            carrera: carrera ? carrera.trim() : null,
+            semestre: semestre ? parseInt(semestre) : null,
+            cedula: cedula ? cedula.trim() : null,
+            activo: true,
+            rol: 'usuario',
+            fecha_registro: serverTimestamp(),
+            ultima_actividad: serverTimestamp()
+        };
         
-        // Generar tokens
+        // Guardar usuario en Firebase
+        await db.collection('usuarios').doc(userId).set(userData);
+        
+        // Generar tokens JWT
         const tokens = generateTokens(userId);
         
-        // Obtener datos del usuario creado
-        const newUser = await executeQuery(
-            `SELECT id_usuario, nombre, apellido, correo, facultad, telefono,
-                    edificio_habitual, carrera, semestre, cedula, activo, fecha_registro
-             FROM Usuarios WHERE id_usuario = ?`,
-            [userId]
-        );
+        // Preparar respuesta (sin contraseña)
+        const responseUser = { ...userData };
+        delete responseUser.contrasena;
         
         res.status(201).json({
             success: true,
             message: 'Usuario registrado correctamente',
             data: {
-                user: newUser[0],
+                user: responseUser,
                 accessToken: tokens.accessToken,
                 refreshToken: tokens.refreshToken,
                 tokenType: 'Bearer',
@@ -107,6 +122,7 @@ const register = async (req, res) => {
     } catch (error) {
         console.error('Error en registro:', error);
         res.status(500).json({
+            success: false,
             error: 'Error interno del servidor',
             message: 'Error creando el usuario'
         });
@@ -121,31 +137,34 @@ const login = async (req, res) => {
         // Validaciones básicas
         if (!correo || !contrasena) {
             return res.status(400).json({
+                success: false,
                 error: 'Datos requeridos',
                 message: 'Correo y contraseña son obligatorios'
             });
         }
         
-        // Buscar usuario por correo
-        const user = await executeQuery(
-            `SELECT id_usuario, nombre, apellido, correo, contrasena, facultad, 
-                    telefono, edificio_habitual, carrera, semestre, cedula, activo
-             FROM Usuarios WHERE correo = ?`,
-            [correo]
-        );
+        const db = getDB();
         
-        if (user.length === 0) {
+        // Buscar usuario por correo
+        const userQuery = await db.collection('usuarios')
+            .where('correo', '==', correo.toLowerCase().trim())
+            .get();
+        
+        if (userQuery.empty) {
             return res.status(401).json({
+                success: false,
                 error: 'Credenciales inválidas',
                 message: 'Correo o contraseña incorrectos'
             });
         }
         
-        const userData = user[0];
+        const userDoc = userQuery.docs[0];
+        const userData = userDoc.data();
         
         // Verificar si el usuario está activo
         if (!userData.activo) {
             return res.status(401).json({
+                success: false,
                 error: 'Cuenta desactivada',
                 message: 'Tu cuenta ha sido desactivada. Contacta al administrador'
             });
@@ -156,28 +175,29 @@ const login = async (req, res) => {
         
         if (!isValidPassword) {
             return res.status(401).json({
+                success: false,
                 error: 'Credenciales inválidas',
                 message: 'Correo o contraseña incorrectos'
             });
         }
         
-        // Generar tokens
+        // Generar tokens JWT
         const tokens = generateTokens(userData.id_usuario);
         
         // Actualizar última actividad del usuario
-        await executeQuery(
-            'UPDATE Usuarios SET ultima_actividad = NOW() WHERE id_usuario = ?',
-            [userData.id_usuario]
-        );
+        await userDoc.ref.update({
+            ultima_actividad: serverTimestamp()
+        });
         
-        // Eliminar contraseña de la respuesta
-        delete userData.contrasena;
+        // Preparar respuesta (sin contraseña)
+        const responseUser = { ...userData };
+        delete responseUser.contrasena;
         
         res.json({
             success: true,
             message: 'Inicio de sesión exitoso',
             data: {
-                user: userData,
+                user: responseUser,
                 accessToken: tokens.accessToken,
                 refreshToken: tokens.refreshToken,
                 tokenType: 'Bearer',
@@ -188,19 +208,21 @@ const login = async (req, res) => {
     } catch (error) {
         console.error('Error en login:', error);
         res.status(500).json({
+            success: false,
             error: 'Error interno del servidor',
             message: 'Error iniciando sesión'
         });
     }
 };
 
-// Renovar token
+// Renovar token de acceso
 const refreshToken = async (req, res) => {
     try {
         const { refreshToken } = req.body;
         
         if (!refreshToken) {
             return res.status(401).json({
+                success: false,
                 error: 'Refresh token requerido',
                 message: 'El token de renovación es obligatorio'
             });
@@ -210,14 +232,14 @@ const refreshToken = async (req, res) => {
             // Verificar refresh token
             const decoded = verifyRefreshToken(refreshToken);
             
-            // Verificar que el usuario existe
-            const user = await executeQuery(
-                'SELECT id_usuario, activo FROM Usuarios WHERE id_usuario = ?',
-                [decoded.id]
-            );
+            const db = getDB();
             
-            if (user.length === 0 || !user[0].activo) {
+            // Verificar que el usuario existe y está activo
+            const userDoc = await db.collection('usuarios').doc(decoded.id).get();
+            
+            if (!userDoc.exists || !userDoc.data().activo) {
                 return res.status(401).json({
+                    success: false,
                     error: 'Usuario inválido',
                     message: 'El usuario no existe o está inactivo'
                 });
@@ -239,6 +261,7 @@ const refreshToken = async (req, res) => {
             
         } catch (tokenError) {
             return res.status(401).json({
+                success: false,
                 error: 'Refresh token inválido',
                 message: 'El token de renovación no es válido o ha expirado'
             });
@@ -247,6 +270,7 @@ const refreshToken = async (req, res) => {
     } catch (error) {
         console.error('Error renovando token:', error);
         res.status(500).json({
+            success: false,
             error: 'Error interno del servidor',
             message: 'Error renovando el token'
         });
@@ -258,16 +282,12 @@ const logout = async (req, res) => {
     try {
         const userId = req.user.id;
         
-        // En una implementación real, aquí podrías:
-        // 1. Blacklistar el token
-        // 2. Eliminar refresh tokens de la base de datos
-        // 3. Limpiar sesiones activas
+        const db = getDB();
         
-        // Por simplicidad, solo actualizamos la última actividad
-        await executeQuery(
-            'UPDATE Usuarios SET ultima_actividad = NOW() WHERE id_usuario = ?',
-            [userId]
-        );
+        // Actualizar la última actividad (opcional)
+        await db.collection('usuarios').doc(userId).update({
+            ultima_actividad: serverTimestamp()
+        });
         
         res.json({
             success: true,
@@ -277,42 +297,44 @@ const logout = async (req, res) => {
     } catch (error) {
         console.error('Error en logout:', error);
         res.status(500).json({
+            success: false,
             error: 'Error interno del servidor',
             message: 'Error cerrando sesión'
         });
     }
 };
 
-// Verificar token (middleware endpoint)
+// Verificar token válido (endpoint para validar sesión)
 const verifyToken = async (req, res) => {
     try {
         // Si llegamos aquí, el middleware de auth ya validó el token
         const userId = req.user.id;
         
-        const user = await executeQuery(
-            `SELECT id_usuario, nombre, apellido, correo, facultad, telefono,
-                    edificio_habitual, carrera, semestre, cedula, activo, fecha_registro
-             FROM Usuarios WHERE id_usuario = ?`,
-            [userId]
-        );
+        const db = getDB();
+        const userDoc = await db.collection('usuarios').doc(userId).get();
         
-        if (user.length === 0) {
+        if (!userDoc.exists) {
             return res.status(404).json({
+                success: false,
                 error: 'Usuario no encontrado'
             });
         }
+        
+        const userData = userDoc.data();
+        delete userData.contrasena; // No enviar contraseña
         
         res.json({
             success: true,
             message: 'Token válido',
             data: {
-                user: user[0]
+                user: userData
             }
         });
         
     } catch (error) {
         console.error('Error verificando token:', error);
         res.status(500).json({
+            success: false,
             error: 'Error interno del servidor',
             message: 'Error verificando el token'
         });
@@ -326,31 +348,38 @@ const forgotPassword = async (req, res) => {
         
         if (!correo) {
             return res.status(400).json({
+                success: false,
                 error: 'Correo requerido',
                 message: 'El correo electrónico es obligatorio'
             });
         }
         
-        // Verificar si el usuario existe
-        const user = await executeQuery(
-            'SELECT id_usuario, nombre, correo FROM Usuarios WHERE correo = ? AND activo = TRUE',
-            [correo]
-        );
+        const db = getDB();
         
-        if (user.length === 0) {
-            // Por seguridad, no revelamos si el email existe o no
+        // Verificar si el usuario existe
+        const userQuery = await db.collection('usuarios')
+            .where('correo', '==', correo.toLowerCase().trim())
+            .where('activo', '==', true)
+            .get();
+        
+        if (userQuery.empty) {
+            // Por seguridad, no revelar si el email existe
             return res.json({
                 success: true,
                 message: 'Si el correo existe, recibirás instrucciones para recuperar tu contraseña'
             });
         }
         
-        // Generar token de recuperación (simple implementación)
+        // Generar token de recuperación
         const resetToken = Math.random().toString(36).substring(2, 15) + 
                           Math.random().toString(36).substring(2, 15);
         
-        // En una implementación real, guardarías este token en la BD con expiración
-        // y enviarías un email con el enlace de recuperación
+        // Guardar token en el usuario con expiración (1 hora)
+        const userDoc = userQuery.docs[0];
+        await userDoc.ref.update({
+            reset_token: resetToken,
+            reset_token_expiry: new Date(Date.now() + 3600000) // 1 hora
+        });
         
         console.log(`Token de recuperación para ${correo}: ${resetToken}`);
         
@@ -364,19 +393,21 @@ const forgotPassword = async (req, res) => {
     } catch (error) {
         console.error('Error en forgot password:', error);
         res.status(500).json({
+            success: false,
             error: 'Error interno del servidor',
             message: 'Error procesando la solicitud'
         });
     }
 };
 
-// Cambiar contraseña con token de recuperación
+// Resetear contraseña con token
 const resetPassword = async (req, res) => {
     try {
         const { token, newPassword, correo } = req.body;
         
         if (!token || !newPassword || !correo) {
             return res.status(400).json({
+                success: false,
                 error: 'Datos requeridos',
                 message: 'Token, nueva contraseña y correo son obligatorios'
             });
@@ -384,24 +415,38 @@ const resetPassword = async (req, res) => {
         
         if (newPassword.length < 6) {
             return res.status(400).json({
+                success: false,
                 error: 'Contraseña débil',
                 message: 'La contraseña debe tener al menos 6 caracteres'
             });
         }
         
-        // En una implementación real, verificarías el token desde la BD
-        // Por ahora, simulamos validación básica
+        const db = getDB();
         
-        // Verificar usuario
-        const user = await executeQuery(
-            'SELECT id_usuario FROM Usuarios WHERE correo = ? AND activo = TRUE',
-            [correo]
-        );
+        // Verificar usuario y token
+        const userQuery = await db.collection('usuarios')
+            .where('correo', '==', correo.toLowerCase().trim())
+            .where('reset_token', '==', token)
+            .where('activo', '==', true)
+            .get();
         
-        if (user.length === 0) {
+        if (userQuery.empty) {
             return res.status(400).json({
+                success: false,
                 error: 'Token inválido',
                 message: 'El token de recuperación no es válido'
+            });
+        }
+        
+        const userDoc = userQuery.docs[0];
+        const userData = userDoc.data();
+        
+        // Verificar expiración del token
+        if (userData.reset_token_expiry && userData.reset_token_expiry.toDate() < new Date()) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token expirado',
+                message: 'El token de recuperación ha expirado'
             });
         }
         
@@ -409,11 +454,13 @@ const resetPassword = async (req, res) => {
         const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
         const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
         
-        // Actualizar contraseña
-        await executeQuery(
-            'UPDATE Usuarios SET contrasena = ? WHERE correo = ?',
-            [hashedPassword, correo]
-        );
+        // Actualizar contraseña y limpiar token
+        await userDoc.ref.update({
+            contrasena: hashedPassword,
+            reset_token: null,
+            reset_token_expiry: null,
+            ultima_actividad: serverTimestamp()
+        });
         
         res.json({
             success: true,
@@ -423,6 +470,7 @@ const resetPassword = async (req, res) => {
     } catch (error) {
         console.error('Error en reset password:', error);
         res.status(500).json({
+            success: false,
             error: 'Error interno del servidor',
             message: 'Error actualizando la contraseña'
         });

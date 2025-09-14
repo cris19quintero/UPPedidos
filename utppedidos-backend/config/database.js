@@ -1,286 +1,354 @@
-// config/database.js - Configuración de base de datos MySQL
-const mysql = require('mysql2/promise');
-const dotenv = require('dotenv');
+    // config/database.js - Configuración Firebase Admin para Backend
+    const admin = require('firebase-admin');
+    const colors = require('colors');
 
-dotenv.config();
+    // Configuración para conectar al MISMO proyecto de Firebase que el frontend
+    const firebaseConfig = {
+    projectId: "utppedidos-2d630", // Mismo proyecto que el frontend
+    // En desarrollo, usaremos Application Default Credentials
+    // En producción, usarás Service Account Keys
+    };
 
-// Configuración de la conexión
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'UTPPEDIDOS',
-    waitForConnections: true,
-    connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
-    queueLimit: 0,
-    acquireTimeout: 60000,
-    timeout: 60000,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 0,
-    reconnect: true,
-    charset: 'utf8mb4',
-    timezone: '+00:00' // UTC
-};
+    let db = null;
+    let app = null;
 
-// Pool de conexiones para mejor rendimiento
-let pool = null;
-
-// Función para conectar a la base de datos
-const connectDB = async () => {
+    // Función para inicializar Firebase Admin SDK
+    const connectDB = async () => {
     try {
-        if (!pool) {
-            pool = mysql.createPool(dbConfig);
-            
-            // Verificar la conexión
-            const connection = await pool.getConnection();
-            console.log('✅ Conectado a MySQL como ID:', connection.threadId);
-            
-            // Verificar que la base de datos existe
-            const [databases] = await connection.execute('SHOW DATABASES LIKE ?', [dbConfig.database]);
-            if (databases.length === 0) {
-                console.warn(`⚠️ Base de datos '${dbConfig.database}' no encontrada`);
-                // Opcional: crear la base de datos si no existe
-                if (process.env.AUTO_CREATE_DB === 'true') {
-                    await connection.execute(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
-                    console.log(`✅ Base de datos '${dbConfig.database}' creada`);
-                }
-            }
-            
-            connection.release();
-            
-            // Verificar tablas principales
-            await verifyTables();
+        if (app) {
+        console.log('✅ Firebase ya está inicializado'.green);
+        return;
         }
-        
-        return pool;
-        
-    } catch (error) {
-        console.error('❌ Error conectando a MySQL:', error.message);
-        
-        // Información adicional para debugging
-        if (error.code === 'ECONNREFUSED') {
-            console.error('💡 Asegúrate de que MySQL esté ejecutándose');
-        } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-            console.error('💡 Verifica las credenciales de la base de datos');
-        } else if (error.code === 'ER_BAD_DB_ERROR') {
-            console.error(`💡 La base de datos '${dbConfig.database}' no existe`);
+
+        // Verificar si ya existe una app inicializada
+        if (admin.apps.length > 0) {
+        app = admin.apps[0];
+        db = admin.firestore(app);
+        console.log('✅ Usando instancia existente de Firebase Admin'.green);
+        return;
         }
-        
-        throw error;
-    }
-};
 
-// Función para verificar que las tablas principales existen
-const verifyTables = async () => {
-    const requiredTables = [
-        'Usuarios',
-        'Cafeterias', 
-        'Productos',
-        'Pedidos',
-        'DetallePedidos',
-        'Carrito',
-        'DetalleCarrito'
-    ];
-    
-    try {
-        const connection = await pool.getConnection();
+        // Configuración para desarrollo local
+        if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Inicializando Firebase Admin para desarrollo...'.yellow);
         
-        for (const table of requiredTables) {
-            const [tables] = await connection.execute(
-                'SHOW TABLES LIKE ?', 
-                [table]
-            );
-            
-            if (tables.length === 0) {
-                console.warn(`⚠️ Tabla '${table}' no encontrada`);
-            }
-        }
-        
-        connection.release();
-        console.log('✅ Verificación de tablas completada');
-        
-    } catch (error) {
-        console.error('❌ Error verificando tablas:', error.message);
-    }
-};
-
-// Función para obtener el pool de conexiones
-const getDB = () => {
-    if (!pool) {
-        throw new Error('Base de datos no inicializada. Llama connectDB() primero.');
-    }
-    return pool;
-};
-
-// Función helper para ejecutar queries con manejo de errores
-const executeQuery = async (query, params = []) => {
-    try {
-        const db = getDB();
-        const [results] = await db.execute(query, params);
-        return results;
-    } catch (error) {
-        console.error('❌ Error ejecutando query:', {
-            query: query.substring(0, 100) + (query.length > 100 ? '...' : ''),
-            params: params,
-            error: error.message
+        // Para desarrollo local, conectar sin service account
+        app = admin.initializeApp({
+            projectId: firebaseConfig.projectId,
         });
-        throw error;
-    }
-};
+        
+        } else {
+        console.log('🚀 Inicializando Firebase Admin para producción...'.yellow);
+        
+        // Para producción, usar service account key
+        const serviceAccount = {
+            type: "service_account",
+            project_id: firebaseConfig.projectId,
+            private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+            private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            client_id: process.env.FIREBASE_CLIENT_ID,
+            auth_uri: "https://accounts.google.com/o/oauth2/auth",
+            token_uri: "https://oauth2.googleapis.com/token",
+            auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+            universe_domain: "googleapis.com"
+        };
 
-// Función para transacciones
-const executeTransaction = async (operations) => {
-    const connection = await pool.getConnection();
-    
-    try {
-        await connection.beginTransaction();
-        
-        const results = [];
-        for (const operation of operations) {
-            const [result] = await connection.execute(operation.query, operation.params || []);
-            results.push(result);
+        app = admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            projectId: firebaseConfig.projectId,
+        });
         }
+
+        // Obtener instancia de Firestore
+        db = admin.firestore(app);
         
-        await connection.commit();
-        return results;
+        // Configurar settings
+        db.settings({
+        ignoreUndefinedProperties: true,
+        timestampsInSnapshots: true
+        });
+
+        console.log('✅ Firebase Admin SDK conectado correctamente'.green);
+        console.log(`📍 Proyecto: ${firebaseConfig.projectId}`.cyan);
+        console.log(`🔗 Conectado a la MISMA base de datos que el frontend`.cyan);
+        
+        // Probar la conexión
+        await testConnection();
         
     } catch (error) {
-        await connection.rollback();
-        console.error('❌ Error en transacción:', error.message);
+        console.error('❌ Error conectando Firebase Admin SDK:', error.message);
+        
+        if (error.code === 'app/invalid-credential') {
+        console.error('💡 Solución: Configura las credenciales de Firebase en .env');
+        } else if (error.message.includes('ENOTFOUND')) {
+        console.error('💡 Verifica tu conexión a internet');
+        }
+        
         throw error;
-    } finally {
-        connection.release();
     }
-};
+    };
 
-// Función para obtener estadísticas de la base de datos
-const getDatabaseStats = async () => {
+    // Función para obtener la instancia de Firestore
+    const getDB = () => {
+    if (!db) {
+        throw new Error('❌ Firebase no inicializado. Ejecuta connectDB() primero.');
+    }
+    return db;
+    };
+
+    // Función para probar la conexión
+    const testConnection = async () => {
     try {
-        const stats = {};
+        const testRef = db.collection('_connection_test').doc('test');
+        await testRef.set({ 
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        message: 'Backend connection test'
+        });
         
-        // Contadores por tabla
-        const tables = ['Usuarios', 'Cafeterias', 'Productos', 'Pedidos'];
+        console.log('✅ Conexión a Firestore verificada'.green);
         
-        for (const table of tables) {
-            try {
-                const [result] = await executeQuery(`SELECT COUNT(*) as count FROM ${table}`);
-                stats[table.toLowerCase()] = result[0].count;
-            } catch (error) {
-                stats[table.toLowerCase()] = 0;
-            }
+        // Limpiar documento de prueba
+        await testRef.delete();
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Error en test de conexión:', error.message);
+        return false;
+    }
+    };
+
+    // Función para health check
+    const healthCheck = async () => {
+    try {
+        if (!db) return false;
+        
+        // Intentar hacer una operación simple
+        await db.collection('_health').doc('check').set({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'healthy'
+        });
+        
+        return true;
+    } catch (error) {
+        console.error('Health check failed:', error);
+        return false;
+    }
+    };
+
+    // Función para obtener estadísticas de la base de datos
+    const getDatabaseStats = async () => {
+    try {
+        const stats = {
+        timestamp: new Date().toISOString()
+        };
+        
+        // Contar documentos en colecciones principales
+        const collections = ['usuarios', 'cafeterias', 'productos', 'pedidos', 'carritos'];
+        
+        for (const collectionName of collections) {
+        try {
+            const snapshot = await db.collection(collectionName).count().get();
+            stats[collectionName] = snapshot.data().count;
+        } catch (error) {
+            console.warn(`No se pudo contar ${collectionName}:`, error.message);
+            stats[collectionName] = 0;
+        }
         }
         
         // Estadísticas adicionales
-        const [activeUsers] = await executeQuery(
-            'SELECT COUNT(*) as count FROM Usuarios WHERE activo = TRUE'
-        );
-        stats.usuarios_activos = activeUsers[0].count;
+        try {
+        // Usuarios activos
+        const activeUsersSnapshot = await db.collection('usuarios')
+            .where('activo', '==', true)
+            .count()
+            .get();
+        stats.usuarios_activos = activeUsersSnapshot.data().count;
         
-        const [todayOrders] = await executeQuery(
-            'SELECT COUNT(*) as count FROM Pedidos WHERE DATE(fecha_pedido) = CURDATE()'
-        );
-        stats.pedidos_hoy = todayOrders[0].count;
+        // Pedidos de hoy
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
-        const [totalRevenue] = await executeQuery(
-            'SELECT COALESCE(SUM(total), 0) as total FROM Pedidos WHERE estado = "Finalizado"'
-        );
-        stats.ingresos_totales = parseFloat(totalRevenue[0].total);
+        const todayOrdersSnapshot = await db.collection('pedidos')
+            .where('fecha_pedido', '>=', today)
+            .count()
+            .get();
+        stats.pedidos_hoy = todayOrdersSnapshot.data().count;
+        
+        } catch (error) {
+        console.warn('Error obteniendo estadísticas adicionales:', error.message);
+        stats.usuarios_activos = 0;
+        stats.pedidos_hoy = 0;
+        }
         
         return stats;
-        
     } catch (error) {
-        console.error('Error obteniendo estadísticas:', error);
-        return {};
+        console.error('Error obteniendo estadísticas de BD:', error);
+        return { error: error.message };
     }
-};
+    };
 
-// Función para cerrar todas las conexiones
-const closeDB = async () => {
-    if (pool) {
-        try {
-            await pool.end();
-            pool = null;
-            console.log('✅ Conexiones de base de datos cerradas');
-        } catch (error) {
-            console.error('❌ Error cerrando conexiones:', error.message);
+    // Función para cerrar conexiones (no necesaria en Firebase Admin)
+    const closeDB = async () => {
+    try {
+        if (app) {
+        await app.delete();
+        app = null;
+        db = null;
+        console.log('✅ Firebase Admin SDK desconectado'.green);
         }
-    }
-};
-
-// Función para verificar la salud de la base de datos
-const healthCheck = async () => {
-    try {
-        const db = getDB();
-        const [result] = await db.execute('SELECT 1 as health');
-        return result[0].health === 1;
     } catch (error) {
-        console.error('❌ Health check failed:', error.message);
-        return false;
+        console.error('❌ Error cerrando Firebase:', error.message);
     }
-};
+    };
 
-// Función para limpiar datos antiguos (opcional)
-const cleanupOldData = async () => {
+    // Helpers de Firestore
+    const FieldValue = admin.firestore.FieldValue;
+    const Timestamp = admin.firestore.Timestamp;
+
+    // Función para generar ID único
+    const generateId = () => {
+    return db ? db.collection('temp').doc().id : Date.now().toString();
+    };
+
+    // Función para timestamp del servidor
+    const serverTimestamp = () => {
+    return FieldValue.serverTimestamp();
+    };
+
+    // Función para batch operations
+    const getBatch = () => {
+    return db.batch();
+    };
+
+    // Función para transacciones
+    const runTransaction = async (callback) => {
+    return db.runTransaction(callback);
+    };
+
+    // Función helper para consultas simples
+    const executeQuery = async (collection, filters = {}, options = {}) => {
     try {
+        let query = db.collection(collection);
+        
+        // Aplicar filtros
+        Object.entries(filters).forEach(([field, condition]) => {
+        if (condition && typeof condition === 'object' && condition.operator) {
+            query = query.where(field, condition.operator, condition.value);
+        } else if (condition !== undefined && condition !== null) {
+            query = query.where(field, '==', condition);
+        }
+        });
+        
+        // Aplicar ordenamiento
+        if (options.orderBy) {
+        const { field, direction = 'asc' } = options.orderBy;
+        query = query.orderBy(field, direction);
+        }
+        
+        // Aplicar límite
+        if (options.limit) {
+        query = query.limit(options.limit);
+        }
+        
+        // Aplicar offset (usando startAfter)
+        if (options.startAfter) {
+        query = query.startAfter(options.startAfter);
+        }
+        
+        const snapshot = await query.get();
+        return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+        }));
+        
+    } catch (error) {
+        console.error(`Error ejecutando query en ${collection}:`, error);
+        throw error;
+    }
+    };
+
+    // Función para limpiar datos antiguos
+    const cleanupOldData = async () => {
+    try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
         // Limpiar carritos abandonados (más de 7 días)
-        await executeQuery(
-            `DELETE FROM DetalleCarrito 
-             WHERE id_carrito IN (
-                 SELECT id_carrito FROM Carrito 
-                 WHERE fecha_creacion < DATE_SUB(NOW(), INTERVAL 7 DAY)
-             )`
-        );
+        const oldCarritos = await db.collection('carritos')
+        .where('fecha_creacion', '<', sevenDaysAgo)
+        .where('activo', '==', false)
+        .get();
         
-        await executeQuery(
-            'DELETE FROM Carrito WHERE fecha_creacion < DATE_SUB(NOW(), INTERVAL 7 DAY)'
-        );
+        const batch = getBatch();
+        oldCarritos.docs.forEach(doc => {
+        batch.delete(doc.ref);
+        });
         
-        // Limpiar pedidos expirados muy antiguos (más de 30 días)
-        await executeQuery(
-            `DELETE FROM DetallePedidos 
-             WHERE id_pedido IN (
-                 SELECT id_pedido FROM Pedidos 
-                 WHERE estado = "Expirado" AND fecha_pedido < DATE_SUB(NOW(), INTERVAL 30 DAY)
-             )`
-        );
-        
-        await executeQuery(
-            'DELETE FROM Pedidos WHERE estado = "Expirado" AND fecha_pedido < DATE_SUB(NOW(), INTERVAL 30 DAY)'
-        );
-        
-        console.log('✅ Limpieza de datos completada');
+        if (oldCarritos.size > 0) {
+        await batch.commit();
+        console.log(`🧹 Limpiados ${oldCarritos.size} carritos antiguos`.green);
+        }
         
     } catch (error) {
-        console.error('❌ Error en limpieza de datos:', error.message);
+        console.error('Error en limpieza de datos:', error);
     }
-};
+    };
 
-// Ejecutar limpieza automática cada 24 horas en producción
-if (process.env.NODE_ENV === 'production') {
+    // Ejecutar limpieza automática en producción
+    if (process.env.NODE_ENV === 'production') {
     setInterval(cleanupOldData, 24 * 60 * 60 * 1000); // 24 horas
-}
+    }
 
-// Manejar cierre graceful
-process.on('SIGINT', async () => {
-    console.log('\n🔄 Cerrando conexiones de base de datos...');
-    await closeDB();
-    process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-    console.log('\n🔄 Cerrando conexiones de base de datos...');
-    await closeDB();
-    process.exit(0);
-});
-
-module.exports = {
+    module.exports = {
     connectDB,
     getDB,
-    executeQuery,
-    executeTransaction,
-    getDatabaseStats,
+    testConnection,
     healthCheck,
+    getDatabaseStats,
+    closeDB,
+    generateId,
+    serverTimestamp,
+    getBatch,
+    runTransaction,
+    executeQuery,
     cleanupOldData,
-    closeDB
-};
+    FieldValue,
+    Timestamp,
+    admin // Exportar admin para uso avanzado
+    };
+
+    // ===== Instrucciones de configuración =====
+
+    /* 
+    INSTRUCCIONES PARA CONFIGURAR FIREBASE ADMIN EN EL BACKEND:
+
+    1. DESARROLLO LOCAL:
+    - No necesitas configurar credenciales especiales
+    - Asegúrate de tener permisos en el proyecto Firebase
+    - El backend usará tus credenciales de desarrollo
+
+    2. CONFIGURAR SERVICE ACCOUNT (para producción):
+    
+    a) Ve a Firebase Console: https://console.firebase.google.com/
+    b) Selecciona tu proyecto: utppedidos-2d630
+    c) Ve a: Project Settings > Service Accounts
+    d) Click en "Generate new private key"
+    e) Se descargará un archivo JSON con las credenciales
+    
+    f) Copia los valores del JSON a tu .env:
+        FIREBASE_PRIVATE_KEY_ID=valor_del_json
+        FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\ntu_clave_aqui\n-----END PRIVATE KEY-----\n"
+        FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@utppedidos-2d630.iam.gserviceaccount.com
+        FIREBASE_CLIENT_ID=valor_del_json
+
+    3. TESTING:
+    - Ejecuta: npm run dev
+    - Verifica en la consola que aparezca: "✅ Firebase Admin SDK conectado correctamente"
+    - El backend estará conectado a la MISMA base de datos que el frontend
+
+    4. IMPORTANTE:
+    - NUNCA subas las credenciales al repositorio
+    - Usa diferentes service accounts para desarrollo y producción
+    - El frontend y backend comparten la misma base de datos de Firestore
+    */

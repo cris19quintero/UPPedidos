@@ -8,7 +8,7 @@ import '../styles/Navbar.css';
 
 function Navbar() {
   const { user } = useAuth();
-  const { getCartCount } = useCart();
+  const { cartCount } = useCart(); // ✅ Ahora funciona
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const location = useLocation();
 
@@ -25,13 +25,8 @@ function Navbar() {
     return 'Usuario';
   };
 
-  const handleCartClick = () => {
-    setIsCartModalOpen(true);
-  };
-
-  const closeCartModal = () => {
-    setIsCartModalOpen(false);
-  };
+  const handleCartClick = () => setIsCartModalOpen(true);
+  const closeCartModal = () => setIsCartModalOpen(false);
 
   // Función para verificar si una ruta está activa
   const isActive = (path) => {
@@ -79,7 +74,7 @@ function Navbar() {
           <button className="nav-button" id="cart-btn" title="Carrito" onClick={handleCartClick}>
             <div className="icon-container">
               <i className="fas fa-shopping-cart"></i>
-              <span className="cart-badge" id="cart-count">{getCartCount()}</span>
+              <span className="cart-badge" id="cart-count">{cartCount}</span>
             </div>
           </button>
         </div>

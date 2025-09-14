@@ -1,16 +1,55 @@
-module.exports = router;
-
 // ===== routes/users.js =====
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
+const authController = require('../controllers/authController');
+const { auth } = require('../middleware/auth');
+const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter')
 const router = express.Router();
 
 // @route   GET /api/users
 // @desc    Get all users (Admin only)
 // @access  Private/Admin
+
+
+// @route   POST /api/auth/register
+// @desc    Registrar nuevo usuario
+// @access  Public
+router.post('/register', registerLimiter, authController.register);
+
+// @route   POST /api/auth/login
+// @desc    Iniciar sesión
+// @access  Public
+router.post('/login', loginLimiter, authController.login);
+
+// @route   POST /api/auth/refresh
+// @desc    Renovar token de acceso
+// @access  Public
+router.post('/refresh', authController.refreshToken);
+
+// @route   GET /api/auth/me
+// @desc    Obtener información del usuario actual
+// @access  Private
+router.get('/me', auth, authController.verifyToken);
+
+// @route   POST /api/auth/logout
+// @desc    Cerrar sesión
+// @access  Private
+router.post('/logout', auth, authController.logout);
+
+// @route   POST /api/auth/forgot-password
+// @desc    Solicitar recuperación de contraseña
+// @access  Public
+router.post('/forgot-password', authController.forgotPassword);
+
+// @route   POST /api/auth/reset-password
+// @desc    Restablecer contraseña
+// @access  Public
+router.post('/reset-password', authController.resetPassword);
+
+module.exports = router;
 router.get('/', [auth, admin], async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;

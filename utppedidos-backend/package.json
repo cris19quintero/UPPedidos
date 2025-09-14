@@ -11,13 +11,14 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "db:init": "node scripts/initDatabase.js",
-    "db:seed": "node scripts/seedDatabase.js",
-    "db:reset": "node scripts/resetDatabase.js"
+    "db:init": "node scripts/initFirebase.js",
+    "db:seed": "node scripts/seedFirebase.js",
+    "db:reset": "node scripts/resetFirebase.js"
   },
   "keywords": [
     "express",
-    "mysql",
+    "firebase",
+    "firestore",
     "api",
     "food-delivery",
     "university",
@@ -28,7 +29,7 @@
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "mysql2": "^3.6.5",
+    "firebase-admin": "^12.0.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "cors": "^2.8.5",
@@ -42,7 +43,8 @@
     "nodemailer": "^6.9.7",
     "uuid": "^9.0.1",
     "moment": "^2.29.4",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "colors": "^1.4.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
@@ -54,13 +56,5 @@
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/tu-usuario/utpedidos-backend.git"
-  },
-  "bugs": {
-    "url": "https://github.com/tu-usuario/utpedidos-backend/issues"
-  },
-  "homepage": "https://github.com/tu-usuario/utpedidos-backend#readme"
+  }
 }
