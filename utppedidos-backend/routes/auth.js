@@ -1,253 +1,383 @@
-// middleware/auth.js - Middleware de autenticación
-const jwt = require('jsonwebtoken');
-const { executeQuery } = require('../config/database');
+module.exports = router;
 
-// Middleware para verificar token JWT
-const authenticateToken = async (req, res, next) => {
-    try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-        
-        if (!token) {
-            return res.status(401).json({
-                error: 'Token de acceso requerido',
-                message: 'Debes estar autenticado para acceder a este recurso'
-            });
-        }
-        
-        // Verificar el token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'utpedidos_secret_key_2024');
-        
-        // Verificar que el usuario existe y está activo
-        const user = await executeQuery(
-            'SELECT id_usuario, correo, nombre, apellido, activo FROM Usuarios WHERE id_usuario = ? AND activo = TRUE',
-            [decoded.id]
-        );
-        
-        if (user.length === 0) {
-            return res.status(401).json({
-                error: 'Usuario no válido',
-                message: 'El usuario asociado al token no existe o está inactivo'
-            });
-        }
-        
-        // Agregar información del usuario a la request
-        req.user = {
-            id: user[0].id_usuario,
-            email: user[0].correo,
-            nombre: user[0].nombre,
-            apellido: user[0].apellido
-        };
-        
-        next();
-        
-    } catch (error) {
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({
-                error: 'Token inválido',
-                message: 'El token proporcionado no es válido'
-            });
-        }
-        
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({
-                error: 'Token expirado',
-                message: 'El token ha expirado, por favor inicia sesión nuevamente'
-            });
-        }
-        
-        console.error('Error en middleware de autenticación:', error);
-        return res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'Error verificando la autenticación'
+// ===== routes/users.js =====
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
+const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
+const router = express.Router();
+
+// @route   GET /api/users
+// @desc    Get all users (Admin only)
+// @access  Private/Admin
+router.get('/', [auth, admin], async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const rol = req.query.rol || '';
+
+    let query = {};
+    
+    if (search) {
+      query.$or = [
+        { nombre: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (rol) {
+      query.rol = rol;
+    }
+
+    const total = await User.countDocuments(query);
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ fechaRegistro: -1 })
+      .limit(limit)
+      .skip((page - 1) * limit);
+
+    res.json({
+      success: true,
+      users,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Error obteniendo usuarios:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
+
+// @route   GET /api/users/:id
+// @desc    Get user by ID
+// @access  Private/Admin
+router.get('/:id', [auth, admin], async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    console.error('Error obteniendo usuario:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario inválido'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
+
+// @route   PUT /api/users/profile
+// @desc    Update current user profile
+// @access  Private
+router.put('/profile', auth, async (req, res) => {
+  try {
+    const { nombre, telefono, direccion } = req.body;
+    
+    const updateFields = {};
+    if (nombre) updateFields.nombre = nombre;
+    if (telefono) updateFields.telefono = telefono;
+    if (direccion) updateFields.direccion = direccion;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateFields },
+      { new: true }
+    ).select('-password');
+
+    res.json({
+      success: true,
+      message: 'Perfil actualizado exitosamente',
+      user
+    });
+  } catch (error) {
+    console.error('Error actualizando perfil:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
+
+// @route   PUT /api/users/:id
+// @desc    Update user by ID (Admin only)
+// @access  Private/Admin
+router.put('/:id', [auth, admin], async (req, res) => {
+  try {
+    const { nombre, email, telefono, direccion, rol, activo } = req.body;
+    
+    const updateFields = {};
+    if (nombre) updateFields.nombre = nombre;
+    if (email) updateFields.email = email.toLowerCase();
+    if (telefono) updateFields.telefono = telefono;
+    if (direccion) updateFields.direccion = direccion;
+    if (rol) updateFields.rol = rol;
+    if (typeof activo !== 'undefined') updateFields.activo = activo;
+
+    // Verificar si el email ya existe (si se está cambiando)
+    if (email) {
+      const existingUser = await User.findOne({ 
+        email: email.toLowerCase(),
+        _id: { $ne: req.params.id }
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'El email ya está en uso'
         });
+      }
     }
-};
 
-// Middleware para verificar roles (opcional, para admin)
-const requireRole = (roles) => {
-    return async (req, res, next) => {
-        try {
-            const userId = req.user.id;
-            
-            // Verificar rol del usuario
-            const userRole = await executeQuery(
-                'SELECT rol FROM Usuarios WHERE id_usuario = ?',
-                [userId]
-            );
-            
-            if (userRole.length === 0) {
-                return res.status(403).json({
-                    error: 'Acceso denegado',
-                    message: 'No tienes permisos para acceder a este recurso'
-                });
-            }
-            
-            const role = userRole[0].rol;
-            
-            // Verificar si el rol del usuario está en la lista de roles permitidos
-            if (!roles.includes(role)) {
-                return res.status(403).json({
-                    error: 'Permisos insuficientes',
-                    message: `Se requiere uno de los siguientes roles: ${roles.join(', ')}`
-                });
-            }
-            
-            req.user.role = role;
-            next();
-            
-        } catch (error) {
-            console.error('Error verificando rol:', error);
-            return res.status(500).json({
-                error: 'Error interno del servidor',
-                message: 'Error verificando los permisos'
-            });
-        }
-    };
-};
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateFields },
+      { new: true }
+    ).select('-password');
 
-// Middleware para verificar si el usuario es admin
-const requireAdmin = requireRole(['admin']);
-
-// Middleware opcional (no requiere autenticación pero añade info si está presente)
-const optionalAuth = async (req, res, next) => {
-    try {
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        
-        if (!token) {
-            // No hay token, continuar sin usuario
-            req.user = null;
-            return next();
-        }
-        
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'utpedidos_secret_key_2024');
-            
-            const user = await executeQuery(
-                'SELECT id_usuario, correo, nombre, apellido FROM Usuarios WHERE id_usuario = ? AND activo = TRUE',
-                [decoded.id]
-            );
-            
-            if (user.length > 0) {
-                req.user = {
-                    id: user[0].id_usuario,
-                    email: user[0].correo,
-                    nombre: user[0].nombre,
-                    apellido: user[0].apellido
-                };
-            } else {
-                req.user = null;
-            }
-        } catch (tokenError) {
-            // Token inválido o expirado, continuar sin usuario
-            req.user = null;
-        }
-        
-        next();
-        
-    } catch (error) {
-        console.error('Error en middleware de autenticación opcional:', error);
-        req.user = null;
-        next();
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
     }
-};
 
-// Middleware para verificar que el usuario puede acceder a un recurso específico
-const requireOwnership = (getOwnerIdFromParams) => {
-    return async (req, res, next) => {
-        try {
-            const userId = req.user.id;
-            const resourceOwnerId = await getOwnerIdFromParams(req);
-            
-            if (userId !== resourceOwnerId) {
-                return res.status(403).json({
-                    error: 'Acceso denegado',
-                    message: 'Solo puedes acceder a tus propios recursos'
-                });
-            }
-            
-            next();
-            
-        } catch (error) {
-            console.error('Error verificando ownership:', error);
-            return res.status(500).json({
-                error: 'Error interno del servidor',
-                message: 'Error verificando los permisos de acceso'
-            });
-        }
-    };
-};
-
-// Función helper para generar tokens
-const generateTokens = (userId) => {
-    const payload = { id: userId };
-    
-    const accessToken = jwt.sign(
-        payload,
-        process.env.JWT_SECRET || 'utpedidos_secret_key_2024',
-        { expiresIn: process.env.JWT_EXPIRE || '24h' }
-    );
-    
-    const refreshToken = jwt.sign(
-        payload,
-        process.env.JWT_REFRESH_SECRET || 'utpedidos_refresh_secret_2024',
-        { expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d' }
-    );
-    
-    return { accessToken, refreshToken };
-};
-
-// Función para verificar refresh token
-const verifyRefreshToken = (token) => {
-    try {
-        return jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'utpedidos_refresh_secret_2024');
-    } catch (error) {
-        throw error;
+    res.json({
+      success: true,
+      message: 'Usuario actualizado exitosamente',
+      user
+    });
+  } catch (error) {
+    console.error('Error actualizando usuario:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario inválido'
+      });
     }
-};
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
 
-// Middleware para rate limiting específico por usuario
-const userRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
-    const userRequests = new Map();
+// @route   DELETE /api/users/:id
+// @desc    Delete user by ID (Admin only)
+// @access  Private/Admin
+router.delete('/:id', [auth, admin], async (req, res) => {
+  try {
+    // No permitir que un admin se elimine a sí mismo
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'No puedes eliminar tu propia cuenta'
+      });
+    }
+
+    const user = await User.findByIdAndDelete(req.params.id);
     
-    return (req, res, next) => {
-        const userId = req.user ? req.user.id : req.ip;
-        const now = Date.now();
-        const windowStart = now - windowMs;
-        
-        if (!userRequests.has(userId)) {
-            userRequests.set(userId, []);
-        }
-        
-        const requests = userRequests.get(userId);
-        
-        // Limpiar requests antiguos
-        const validRequests = requests.filter(timestamp => timestamp > windowStart);
-        userRequests.set(userId, validRequests);
-        
-        if (validRequests.length >= maxRequests) {
-            return res.status(429).json({
-                error: 'Rate limit excedido',
-                message: `Máximo ${maxRequests} requests por ${windowMs / 1000 / 60} minutos`
-            });
-        }
-        
-        // Agregar request actual
-        validRequests.push(now);
-        userRequests.set(userId, validRequests);
-        
-        next();
-    };
-};
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
 
-module.exports = {
-    authenticateToken,
-    requireRole,
-    requireAdmin,
-    optionalAuth,
-    requireOwnership,
-    generateTokens,
-    verifyRefreshToken,
-    userRateLimit
-};
+    res.json({
+      success: true,
+      message: 'Usuario eliminado exitosamente'
+    });
+  } catch (error) {
+    console.error('Error eliminando usuario:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario inválido'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
+
+// @route   PUT /api/users/:id/toggle-status
+// @desc    Toggle user active status (Admin only)
+// @access  Private/Admin
+router.put('/:id/toggle-status', [auth, admin], async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    // No permitir desactivar la propia cuenta del admin
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'No puedes desactivar tu propia cuenta'
+      });
+    }
+
+    user.activo = !user.activo;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `Usuario ${user.activo ? 'activado' : 'desactivado'} exitosamente`,
+      user: {
+        id: user._id,
+        nombre: user.nombre,
+        email: user.email,
+        activo: user.activo
+      }
+    });
+  } catch (error) {
+    console.error('Error cambiando estado del usuario:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario inválido'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
+
+// @route   POST /api/users/:id/reset-password
+// @desc    Reset user password (Admin only)
+// @access  Private/Admin
+router.post('/:id/reset-password', [auth, admin], async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'La nueva contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    // Encriptar nueva contraseña
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Contraseña restablecida exitosamente'
+    });
+  } catch (error) {
+    console.error('Error restableciendo contraseña:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario inválido'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
+
+// @route   GET /api/users/stats/overview
+// @desc    Get user statistics (Admin only)
+// @access  Private/Admin
+router.get('/stats/overview', [auth, admin], async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const activeUsers = await User.countDocuments({ activo: true });
+    const adminUsers = await User.countDocuments({ rol: 'admin' });
+    const recentUsers = await User.countDocuments({
+      fechaRegistro: {
+        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Últimos 30 días
+      }
+    });
+
+    // Usuarios por mes (últimos 6 meses)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const usersByMonth = await User.aggregate([
+      {
+        $match: {
+          fechaRegistro: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$fechaRegistro' },
+            month: { $month: '$fechaRegistro' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        total: totalUsers,
+        active: activeUsers,
+        inactive: totalUsers - activeUsers,
+        admins: adminUsers,
+        recent: recentUsers,
+        byMonth: usersByMonth
+      }
+    });
+  } catch (error) {
+    console.error('Error obteniendo estadísticas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor'
+    });
+  }
+});
+
+module.exports = router;
