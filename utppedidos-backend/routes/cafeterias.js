@@ -1,261 +1,130 @@
-// routes/cafeterias.js
+// ===== routes/cafeterias.js - MIGRADO A FIREBASE =====
 const express = require('express');
 const router = express.Router();
+const cafeteriaController = require('../controllers/cafeteriaController');
+const { optionalAuth, auth, adminAuth } = require('../middleware/authMiddleware');
+const { generalLimiter } = require('../middleware/rateLimiter');
 
-// Datos estáticos de cafeterías (en producción vendría de Firebase/MongoDB)
-const cafeteriasData = [
-  {
-    id: 1,
-    nombre: 'Cafetería Edificio 1',
-    direccion: 'Edificio 1, Planta Baja',
-    edificio: 'Edificio 1',
-    imagen: '/imagenes/cafeteria1.png',
-    color: '#ff9e80',
-    ubicacion: {
-      lat: 9.0348,
-      lng: -79.5453
-    },
-    horarios: {
-      desayuno: { inicio: '07:00', fin: '09:30' },
-      almuerzo: { inicio: '11:45', fin: '13:45' },
-      cena: { inicio: '16:30', fin: '19:00' }
-    },
-    activa: true,
-    telefono: '+507 123-4567',
-    email: 'cafeteria1@utp.ac.pa',
-    administrador: 'Administrador 1'
-  },
-  {
-    id: 2,
-    nombre: 'Cafetería Central',
-    direccion: 'Edificio Central, 2do Piso',
-    edificio: 'Central',
-    imagen: '/imagenes/cafeteria2.png',
-    color: '#80d8ff',
-    ubicacion: {
-      lat: 9.0349,
-      lng: -79.5454
-    },
-    horarios: {
-      desayuno: { inicio: '07:00', fin: '09:30' },
-      almuerzo: { inicio: '11:45', fin: '13:45' },
-      cena: { inicio: '16:30', fin: '19:00' }
-    },
-    activa: true,
-    telefono: '+507 123-4568',
-    email: 'cafeteriacentral@utp.ac.pa',
-    administrador: 'Administrador 2'
-  },
-  {
-    id: 3,
-    nombre: 'Cafetería Edificio 3',
-    direccion: 'Edificio 3, Planta Baja',
-    edificio: 'Edificio 3',
-    imagen: '/imagenes/cafeteria3.png',
-    color: '#8adc9d',
-    ubicacion: {
-      lat: 9.0350,
-      lng: -79.5455
-    },
-    horarios: {
-      desayuno: { inicio: '07:30', fin: '10:00' },
-      almuerzo: { inicio: '12:00', fin: '14:00' },
-      cena: { inicio: '17:00', fin: '19:30' }
-    },
-    activa: true,
-    telefono: '+507 123-4569',
-    email: 'cafeteria3@utp.ac.pa',
-    administrador: 'Administrador 3'
-  }
-];
+// Aplicar rate limiting
+router.use(generalLimiter);
 
 // @route   GET /api/cafeterias
-// @desc    Get all cafeterias
+// @desc    Obtener todas las cafeterías
 // @access  Public
-router.get('/', async (req, res) => {
-  try {
-    const { activa = true } = req.query;
-    
-    let cafeterias = cafeteriasData;
-    
-    // Filtrar por estado activo si se especifica
-    if (activa !== undefined) {
-      const isActiva = activa === 'true' || activa === true;
-      cafeterias = cafeteriasData.filter(c => c.activa === isActiva);
-    }
-    
-    res.json({
-      success: true,
-      cafeterias,
-      total: cafeterias.length
-    });
-  } catch (error) {
-    console.error('Error obteniendo cafeterías:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
+router.get('/', optionalAuth, cafeteriaController.getAllCafeterias);
 
 // @route   GET /api/cafeterias/:id
-// @desc    Get cafeteria by ID
+// @desc    Obtener cafetería por ID
 // @access  Public
-router.get('/:id', async (req, res) => {
-  try {
-    const cafeteriaId = parseInt(req.params.id);
-    const cafeteria = cafeteriasData.find(c => c.id === cafeteriaId);
-    
-    if (!cafeteria) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cafetería no encontrada'
-      });
-    }
+router.get('/:id', optionalAuth, cafeteriaController.getCafeteriaById);
 
-    res.json({
-      success: true,
-      cafeteria
-    });
-  } catch (error) {
-    console.error('Error obteniendo cafetería:', error);
-    if (error.name === 'CastError') {
-      return res.status(400).json({
-        success: false,
-        message: 'ID de cafetería inválido'
-      });
-    }
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
+// @route   GET /api/cafeterias/:id/stats
+// @desc    Obtener estadísticas de cafetería (Admin)
+// @access  Private/Admin
+router.get('/:id/stats', [auth, adminAuth], cafeteriaController.getCafeteriaStats);
 
 // @route   GET /api/cafeterias/:id/horarios
-// @desc    Get cafeteria schedule
+// @desc    Obtener horarios de cafetería
 // @access  Public
-router.get('/:id/horarios', async (req, res) => {
-  try {
-    const cafeteriaId = parseInt(req.params.id);
-    const cafeteria = cafeteriasData.find(c => c.id === cafeteriaId);
-    
-    if (!cafeteria) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cafetería no encontrada'
-      });
-    }
+router.get('/:id/horarios', optionalAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { getDB } = require('../config/database');
+        const db = getDB();
 
-    res.json({
-      success: true,
-      horarios: cafeteria.horarios,
-      cafeteria: {
-        id: cafeteria.id,
-        nombre: cafeteria.nombre,
-        edificio: cafeteria.edificio
-      }
-    });
-  } catch (error) {
-    console.error('Error obteniendo horarios:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
+        const cafeteriaDoc = await db.collection('cafeterias').doc(id).get();
+
+        if (!cafeteriaDoc.exists || !cafeteriaDoc.data().activa) {
+            return res.status(404).json({
+                success: false,
+                error: 'Cafetería no encontrada',
+                message: 'No se encontró la cafetería especificada'
+            });
+        }
+
+        const data = cafeteriaDoc.data();
+        const horarios = {
+            desayuno: {
+                inicio: data.horario_desayuno_inicio,
+                fin: data.horario_desayuno_fin
+            },
+            almuerzo: {
+                inicio: data.horario_almuerzo_inicio,
+                fin: data.horario_almuerzo_fin
+            },
+            cena: {
+                inicio: data.horario_cena_inicio,
+                fin: data.horario_cena_fin
+            }
+        };
+
+        res.json({
+            success: true,
+            data: {
+                horarios,
+                cafeteria: {
+                    id_cafeteria: id,
+                    nombre: data.nombre,
+                    edificio: data.edificio
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error obteniendo horarios:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'Error obteniendo los horarios'
+        });
+    }
 });
 
 // @route   GET /api/cafeterias/:id/ubicacion
-// @desc    Get cafeteria location
+// @desc    Obtener ubicación de cafetería
 // @access  Public
-router.get('/:id/ubicacion', async (req, res) => {
-  try {
-    const cafeteriaId = parseInt(req.params.id);
-    const cafeteria = cafeteriasData.find(c => c.id === cafeteriaId);
-    
-    if (!cafeteria) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cafetería no encontrada'
-      });
-    }
+router.get('/:id/ubicacion', optionalAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { getDB } = require('../config/database');
+        const db = getDB();
 
-    res.json({
-      success: true,
-      ubicacion: cafeteria.ubicacion,
-      direccion: cafeteria.direccion,
-      cafeteria: {
-        id: cafeteria.id,
-        nombre: cafeteria.nombre,
-        edificio: cafeteria.edificio
-      }
-    });
-  } catch (error) {
-    console.error('Error obteniendo ubicación:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
+        const cafeteriaDoc = await db.collection('cafeterias').doc(id).get();
 
-// @route   GET /api/cafeterias/horario/actual
-// @desc    Get current schedule for all cafeterias
-// @access  Public
-router.get('/horario/actual', async (req, res) => {
-  try {
-    const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    
-    const cafeteriasConEstado = cafeteriasData
-      .filter(c => c.activa)
-      .map(cafeteria => {
-        const horarios = cafeteria.horarios;
-        let estadoActual = 'cerrada';
-        let proximoHorario = null;
-
-        // Verificar cada horario
-        Object.entries(horarios).forEach(([periodo, horario]) => {
-          if (currentTime >= horario.inicio && currentTime <= horario.fin) {
-            estadoActual = `abierta_${periodo}`;
-          }
-        });
-
-        // Si está cerrada, encontrar el próximo horario
-        if (estadoActual === 'cerrada') {
-          const horariosOrdenados = Object.entries(horarios)
-            .map(([periodo, horario]) => ({ periodo, ...horario }))
-            .sort((a, b) => a.inicio.localeCompare(b.inicio));
-
-          for (const horario of horariosOrdenados) {
-            if (currentTime < horario.inicio) {
-              proximoHorario = horario;
-              break;
-            }
-          }
+        if (!cafeteriaDoc.exists || !cafeteriaDoc.data().activa) {
+            return res.status(404).json({
+                success: false,
+                error: 'Cafetería no encontrada',
+                message: 'No se encontró la cafetería especificada'
+            });
         }
 
-        return {
-          ...cafeteria,
-          estado_actual: estadoActual,
-          proximo_horario: proximoHorario,
-          hora_actual: currentTime
-        };
-      });
+        const data = cafeteriaDoc.data();
 
-    res.json({
-      success: true,
-      cafeterias: cafeteriasConEstado,
-      hora_actual: currentTime,
-      fecha_actual: now.toISOString()
-    });
-  } catch (error) {
-    console.error('Error obteniendo horario actual:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
+        res.json({
+            success: true,
+            data: {
+                ubicacion: {
+                    lat: data.latitud || null,
+                    lng: data.longitud || null
+                },
+                direccion: data.direccion,
+                cafeteria: {
+                    id_cafeteria: id,
+                    nombre: data.nombre,
+                    edificio: data.edificio
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error obteniendo ubicación:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'Error obteniendo la ubicación'
+        });
+    }
 });
 
 module.exports = router;

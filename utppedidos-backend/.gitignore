@@ -81,6 +81,7 @@ typings/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.railway
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -219,6 +220,26 @@ newrelic_agent.log
 !.env.example
 
 # ===================================
+# CREDENCIALES FIREBASE - CRÍTICO
+# ===================================
+
+# Service Account Keys - NUNCA subir al repositorio
+serviceAccountKey.json
+serviceAccount.json
+firebase-service-account.json
+*-firebase-adminsdk-*.json
+firebase-adminsdk-*.json
+
+# Archivos de configuración Firebase con credenciales
+firebase-config.json
+firebaseConfig.json
+firebase-credentials.json
+
+# Cualquier archivo que contenga private keys
+*private-key*.json
+*serviceaccount*.json
+
+# ===================================
 # Archivos que SÍ incluir
 # ===================================
 
@@ -226,6 +247,7 @@ newrelic_agent.log
 !.env.example
 !config/database.example.js
 !docker-compose.example.yml
+!serviceAccountKey.example.json
 
 # Incluir archivos de documentación
 !docs/

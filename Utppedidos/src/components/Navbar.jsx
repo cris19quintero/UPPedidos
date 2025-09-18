@@ -8,19 +8,24 @@ import '../styles/Navbar.css';
 
 function Navbar() {
   const { user } = useAuth();
-  const { cartCount } = useCart(); // ✅ Ahora funciona
+  const { cartCount } = useCart();
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const location = useLocation();
 
   // Obtener nombre de usuario
   const getUserName = () => {
+    if (user && user.nombre && user.apellido) {
+      return `${user.nombre} ${user.apellido}`;
+    }
+    if (user && user.nombre) {
+      return user.nombre;
+    }
     if (user && user.email) {
       const userNameFromEmail = user.email.split('@')[0];
-      const formattedName = userNameFromEmail
+      return userNameFromEmail
         .split('.')
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ');
-      return formattedName;
     }
     return 'Usuario';
   };
@@ -28,7 +33,6 @@ function Navbar() {
   const handleCartClick = () => setIsCartModalOpen(true);
   const closeCartModal = () => setIsCartModalOpen(false);
 
-  // Función para verificar si una ruta está activa
   const isActive = (path) => {
     if (path === '/menu') {
       return location.pathname === '/menu' || location.pathname.startsWith('/menu/');
@@ -44,29 +48,17 @@ function Navbar() {
           <h1 id="welcome-text">Bienvenido, {getUserName()}</h1>
         </div>
         <div className="nav-buttons">
-          <Link 
-            to="/menu" 
-            className={`nav-button ${isActive('/menu') ? 'active' : ''}`} 
-            title="Inicio"
-          >
+          <Link to="/menu" className={`nav-button ${isActive('/menu') ? 'active' : ''}`} title="Inicio">
             <div className="icon-container">
               <i className="fas fa-home"></i>
             </div>
           </Link>
-          <Link 
-            to="/perfil" 
-            className={`nav-button ${isActive('/perfil') ? 'active' : ''}`} 
-            title="Mi Perfil"
-          >
+          <Link to="/perfil" className={`nav-button ${isActive('/perfil') ? 'active' : ''}`} title="Mi Perfil">
             <div className="icon-container">
               <i className="fas fa-user"></i>
             </div>
           </Link>
-          <Link 
-            to="/pedidos" 
-            className={`nav-button ${isActive('/pedidos') ? 'active' : ''}`} 
-            title="Mis Pedidos"
-          >
+          <Link to="/pedidos" className={`nav-button ${isActive('/pedidos') ? 'active' : ''}`} title="Mis Pedidos">
             <div className="icon-container">
               <i className="fas fa-bag-shopping"></i>
             </div>
@@ -82,10 +74,7 @@ function Navbar() {
       <div className="separator"></div>
 
       {/* Modal del carrito */}
-      <CartModal 
-        isOpen={isCartModalOpen} 
-        onClose={closeCartModal} 
-      />
+      <CartModal isOpen={isCartModalOpen} onClose={closeCartModal} />
     </>
   );
 }

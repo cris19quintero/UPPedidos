@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "description": "Backend API para UTPedidos - Sistema de pedidos de cafeterías UTP",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "build": "echo 'No build step required'",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -13,7 +18,9 @@
     "format": "prettier --write .",
     "db:init": "node scripts/initFirebase.js",
     "db:seed": "node scripts/seedFirebase.js",
-    "db:reset": "node scripts/resetFirebase.js"
+    "health": "curl -f http://localhost:5000/health || exit 1",
+    "railway:build": "npm ci --only=production",
+    "railway:start": "NODE_ENV=production node server.js"
   },
   "keywords": [
     "express",
@@ -23,38 +30,42 @@
     "food-delivery",
     "university",
     "cafeteria",
-    "orders"
+    "orders",
+    "railway"
   ],
   "author": "UTP Development Team",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "firebase-admin": "^12.0.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
+    "colors": "^1.4.0",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "helmet": "^7.1.0",
+    "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
-    "compression": "^1.7.4",
-    "morgan": "^1.10.0",
     "express-validator": "^7.0.1",
+    "firebase-admin": "^12.0.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.29.4",
+    "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
     "uuid": "^9.0.1",
-    "moment": "^2.29.4",
-    "winston": "^3.11.0",
-    "colors": "^1.4.0"
+    "winston": "^3.11.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "jest": "^29.7.0",
-    "supertest": "^6.3.3",
     "eslint": "^8.55.0",
-    "prettier": "^3.1.0"
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.0",
+    "supertest": "^6.3.3"
   },
-  "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cris19quintero/UPPedidos/tree/main/utppedidos-backend"
+  },
+  "railway": {
+    "template": "nodejs"
   }
 }

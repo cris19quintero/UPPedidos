@@ -12,19 +12,24 @@ function Principal() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Obtener el nombre de usuario del contexto o localStorage
-    if (user && user.email) {
-      // Extraer el nombre de usuario del correo (parte antes del @)
-      const userNameFromEmail = user.email.split('@')[0];
-      // Capitalizar la primera letra y reemplazar puntos por espacios
-      const formattedName = userNameFromEmail
-        .split('.')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-      
-      setUserName(formattedName);
+    if (user) {
+      if (user.nombre && user.apellido) {
+        // 👤 Nombre y apellido reales del backend
+        setUserName(`${user.nombre} ${user.apellido}`);
+      } else if (user.nombre) {
+        // 👤 Solo nombre
+        setUserName(user.nombre);
+      } else if (user.email) {
+        // 📧 Fallback: generar nombre a partir del email
+        const userNameFromEmail = user.email.split('@')[0];
+        const formattedName = userNameFromEmail
+          .split('.')
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+        setUserName(formattedName);
+      }
     } else {
-      // Fallback al localStorage
+      // 🔄 Fallback si no hay user en contexto: usar localStorage o sessionStorage
       const email = localStorage.getItem('utpedidos_email') || sessionStorage.getItem('utpedidos_email');
       if (email) {
         const userNameFromEmail = email.split('@')[0];
@@ -64,6 +69,7 @@ function Principal() {
             <h1>¡Bienvenido!</h1>
           </div>
           <div className="user-section">
+            {/* Aquí ahora se verá el nombre real del usuario */}
             <span>{userName}</span>
           </div>
         </header>

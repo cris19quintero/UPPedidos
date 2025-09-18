@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { auth, adminAuth } = require('../middleware/auth');
+const { auth, adminAuth } = require('../middleware/authMiddleware'); // Importa desde tu middleware correcto
 const { generalLimiter } = require('../middleware/rateLimiter');
 const { getDB } = require('../config/database');
 

@@ -1,421 +1,242 @@
-// routes/menu.js
+// routes/menu.js - VERSION CORREGIDA QUE FUNCIONA
 const express = require('express');
 const router = express.Router();
-
-// Datos estáticos del menú (en producción vendría de Firebase/MongoDB)
-const menuData = {
-  1: {
-    categorias: [
-      {
-        categoria: 'Desayunos',
-        items: [
-          {
-            id: 1,
-            nombre: 'Desayuno Panameño',
-            descripcion: 'Huevos revueltos, tortilla, queso fresco y café',
-            precio: 4.50,
-            imagen: '/imagenes/desayuno-panameno.jpg',
-            disponible: true,
-            categoria: 'Desayunos',
-            horario: 'desayuno',
-            tiempo_preparacion: 15,
-            ingredientes: ['huevos', 'tortilla', 'queso', 'café'],
-            calorias: 450,
-            vegetariano: false,
-            cafeteriaId: 1
-          },
-          {
-            id: 2,
-            nombre: 'Sandwich de Jamón',
-            descripcion: 'Pan tostado, jamón de pavo, queso amarillo',
-            precio: 3.00,
-            imagen: '/imagenes/sandwich-jamon.jpg',
-            disponible: true,
-            categoria: 'Desayunos',
-            horario: 'desayuno',
-            tiempo_preparacion: 8,
-            ingredientes: ['pan', 'jamón', 'queso'],
-            calorias: 320,
-            vegetariano: false,
-            cafeteriaId: 1
-          },
-          {
-            id: 3,
-            nombre: 'Bowl de Avena con Frutas',
-            descripcion: 'Avena, frutas frescas, miel y nueces',
-            precio: 2.75,
-            imagen: '/imagenes/bowl-avena.jpg',
-            disponible: true,
-            categoria: 'Desayunos',
-            horario: 'desayuno',
-            tiempo_preparacion: 10,
-            ingredientes: ['avena', 'frutas', 'miel', 'nueces'],
-            calorias: 280,
-            vegetariano: true,
-            cafeteriaId: 1
-          }
-        ]
-      },
-      {
-        categoria: 'Bebidas Calientes',
-        items: [
-          {
-            id: 4,
-            nombre: 'Café Americano',
-            descripcion: 'Café negro recién preparado',
-            precio: 1.50,
-            imagen: '/imagenes/cafe-americano.jpg',
-            disponible: true,
-            categoria: 'Bebidas Calientes',
-            horario: 'todo_dia',
-            tiempo_preparacion: 3,
-            ingredientes: ['café'],
-            calorias: 5,
-            vegetariano: true,
-            cafeteriaId: 1
-          },
-          {
-            id: 5,
-            nombre: 'Café con Leche',
-            descripcion: 'Café con leche espumosa',
-            precio: 2.00,
-            imagen: '/imagenes/cafe-leche.jpg',
-            disponible: true,
-            categoria: 'Bebidas Calientes',
-            horario: 'todo_dia',
-            tiempo_preparacion: 5,
-            ingredientes: ['café', 'leche'],
-            calorias: 120,
-            vegetariano: true,
-            cafeteriaId: 1
-          }
-        ]
-      },
-      {
-        categoria: 'Almuerzos',
-        items: [
-          {
-            id: 6,
-            nombre: 'Pollo Guisado',
-            descripcion: 'Pollo guisado con arroz blanco y ensalada mixta',
-            precio: 5.50,
-            imagen: '/imagenes/pollo-guisado.jpg',
-            disponible: true,
-            categoria: 'Almuerzos',
-            horario: 'almuerzo',
-            tiempo_preparacion: 20,
-            ingredientes: ['pollo', 'arroz', 'vegetales'],
-            calorias: 620,
-            vegetariano: false,
-            cafeteriaId: 1
-          }
-        ]
-      }
-    ]
-  },
-  2: {
-    categorias: [
-      {
-        categoria: 'Desayunos',
-        items: [
-          {
-            id: 7,
-            nombre: 'Pancakes con Miel',
-            descripcion: 'Stack de pancakes con miel de maple',
-            precio: 3.50,
-            imagen: '/imagenes/pancakes.jpg',
-            disponible: true,
-            categoria: 'Desayunos',
-            horario: 'desayuno',
-            tiempo_preparacion: 12,
-            ingredientes: ['harina', 'huevos', 'leche', 'miel'],
-            calorias: 420,
-            vegetariano: true,
-            cafeteriaId: 2
-          }
-        ]
-      },
-      {
-        categoria: 'Almuerzos',
-        items: [
-          {
-            id: 8,
-            nombre: 'Sancocho de Gallina',
-            descripcion: 'Sancocho tradicional panameño',
-            precio: 6.50,
-            imagen: '/imagenes/sancocho.jpg',
-            disponible: true,
-            categoria: 'Almuerzos',
-            horario: 'almuerzo',
-            tiempo_preparacion: 25,
-            ingredientes: ['gallina', 'yuca', 'ñame', 'mazorca'],
-            calorias: 580,
-            vegetariano: false,
-            cafeteriaId: 2
-          },
-          {
-            id: 9,
-            nombre: 'Arroz con Pollo',
-            descripcion: 'Arroz amarillo con pollo y vegetales',
-            precio: 6.00,
-            imagen: '/imagenes/arroz-pollo.jpg',
-            disponible: true,
-            categoria: 'Almuerzos',
-            horario: 'almuerzo',
-            tiempo_preparacion: 18,
-            ingredientes: ['arroz', 'pollo', 'vegetales'],
-            calorias: 520,
-            vegetariano: false,
-            cafeteriaId: 2
-          }
-        ]
-      },
-      {
-        categoria: 'Cenas',
-        items: [
-          {
-            id: 10,
-            nombre: 'Hamburguesa Clásica',
-            descripcion: 'Hamburguesa con papas fritas',
-            precio: 4.50,
-            imagen: '/imagenes/hamburguesa.jpg',
-            disponible: true,
-            categoria: 'Cenas',
-            horario: 'cena',
-            tiempo_preparacion: 15,
-            ingredientes: ['carne', 'pan', 'vegetales', 'papas'],
-            calorias: 680,
-            vegetariano: false,
-            cafeteriaId: 2
-          }
-        ]
-      }
-    ]
-  },
-  3: {
-    categorias: [
-      {
-        categoria: 'Desayunos',
-        items: [
-          {
-            id: 11,
-            nombre: 'Tostadas con Tocino',
-            descripcion: 'Huevos revueltos, tostadas y tocino con jugo de naranja',
-            precio: 1.80,
-            imagen: '/imagenes/tostadas-tocino.jpg',
-            disponible: true,
-            categoria: 'Desayunos',
-            horario: 'desayuno',
-            tiempo_preparacion: 10,
-            ingredientes: ['huevos', 'tostadas', 'tocino', 'jugo'],
-            calorias: 380,
-            vegetariano: false,
-            cafeteriaId: 3
-          }
-        ]
-      },
-      {
-        categoria: 'Almuerzos',
-        items: [
-          {
-            id: 12,
-            nombre: 'Arroz con Pollo',
-            descripcion: 'Arroz con pollo en plancha, frijoles, ensalada y plátanos fritos',
-            precio: 1.75,
-            imagen: '/imagenes/arroz-pollo-3.jpg',
-            disponible: true,
-            categoria: 'Almuerzos',
-            horario: 'almuerzo',
-            tiempo_preparacion: 18,
-            ingredientes: ['arroz', 'pollo', 'frijoles', 'ensalada', 'plátano'],
-            calorias: 490,
-            vegetariano: false,
-            cafeteriaId: 3
-          }
-        ]
-      },
-      {
-        categoria: 'Cenas Ligeras',
-        items: [
-          {
-            id: 13,
-            nombre: 'Empanadas de Carne',
-            descripcion: 'Empanadas crujientes rellenas de carne',
-            precio: 2.50,
-            imagen: '/imagenes/empanadas-carne.jpg',
-            disponible: true,
-            categoria: 'Cenas Ligeras',
-            horario: 'cena',
-            tiempo_preparacion: 10,
-            ingredientes: ['masa', 'carne', 'condimentos'],
-            calorias: 220,
-            vegetariano: false,
-            cafeteriaId: 3
-          },
-          {
-            id: 14,
-            nombre: 'Arroz con Carne',
-            descripcion: 'Arroz blanco, frijoles, carne y ensalada de vegetales',
-            precio: 1.00,
-            imagen: '/imagenes/arroz-carne.jpg',
-            disponible: true,
-            categoria: 'Cenas Ligeras',
-            horario: 'cena',
-            tiempo_preparacion: 16,
-            ingredientes: ['arroz', 'frijoles', 'carne', 'ensalada'],
-            calorias: 410,
-            vegetariano: false,
-            cafeteriaId: 3
-          }
-        ]
-      }
-    ]
-  }
-};
+const { getDB } = require('../config/database');
 
 // @route   GET /api/menu/cafeteria/:id
-// @desc    Get menu by cafeteria ID
+// @desc    Obtener menú por cafetería - RUTA PRINCIPAL
 // @access  Public
 router.get('/cafeteria/:id', async (req, res) => {
   try {
-    const cafeteriaId = parseInt(req.params.id);
-    const { horario, categoria, vegetariano } = req.query;
+    const cafeteriaId = req.params.id;
+    console.log(`📍 GET /api/menu/cafeteria/${cafeteriaId}`);
+    console.log(`🕐 Timestamp: ${new Date().toISOString()}`);
     
-    const menu = menuData[cafeteriaId];
+    const db = getDB();
     
-    if (!menu) {
+    // Primero, verificar que la cafetería existe
+    const cafeteriaDoc = await db.collection('cafeterias').doc(cafeteriaId).get();
+    
+    if (!cafeteriaDoc.exists) {
+      console.log('⚠️ Cafetería no encontrada');
       return res.status(404).json({
         success: false,
-        message: 'Menú no encontrado para esta cafetería'
+        message: `Cafetería ${cafeteriaId} no encontrada`
       });
     }
-
-    let menuFiltrado = { ...menu };
-
-    // Filtrar por horario
-    if (horario && horario !== 'todo_dia') {
-      menuFiltrado.categorias = menu.categorias.map(cat => ({
-        ...cat,
-        items: cat.items.filter(item => 
-          item.disponible && (item.horario === horario || item.horario === 'todo_dia')
-        )
-      })).filter(cat => cat.items.length > 0);
-    } else {
-      // Solo mostrar items disponibles
-      menuFiltrado.categorias = menu.categorias.map(cat => ({
-        ...cat,
-        items: cat.items.filter(item => item.disponible)
-      })).filter(cat => cat.items.length > 0);
+    
+    const cafeteriaData = cafeteriaDoc.data();
+    console.log(`✅ Cafetería: ${cafeteriaData.nombre}`);
+    
+    // Buscar productos de esta cafetería
+    // IMPORTANTE: Verificar el nombre exacto del campo en tu Firebase
+    const productosSnapshot = await db.collection('productos')
+      .where('id_cafeteria', '==', cafeteriaId)
+      .where('activo', '==', true)
+      .get();
+    
+    console.log(`📊 Productos encontrados: ${productosSnapshot.size}`);
+    
+    if (productosSnapshot.empty) {
+      // Si no hay productos en 'productos', intentar en 'menu'
+      console.log('🔄 Buscando en colección alternativa "menu"...');
+      
+      const menuSnapshot = await db.collection('menu')
+        .where('cafeteria_id', '==', cafeteriaId)
+        .where('activo', '==', true)
+        .get();
+      
+      console.log(`📊 Productos en menu: ${menuSnapshot.size}`);
+      
+      if (menuSnapshot.empty) {
+        return res.json({
+          success: true,
+          data: {
+            cafeteria: {
+              id_cafeteria: cafeteriaId,
+              nombre: cafeteriaData.nombre
+            },
+            categorias: [],
+            total_items: 0,
+            mensaje: 'No hay productos disponibles en este momento'
+          }
+        });
+      }
+      
+      // Procesar productos de la colección 'menu'
+      const productos = [];
+      menuSnapshot.forEach(doc => {
+        const data = doc.data();
+        productos.push({
+          id: doc.id,
+          id_producto: doc.id,
+          ...data
+        });
+      });
+      
+      // Agrupar por categorías
+      const categorias = agruparPorCategorias(productos);
+      
+      return res.json({
+        success: true,
+        data: {
+          cafeteria: {
+            id_cafeteria: cafeteriaId,
+            nombre: cafeteriaData.nombre
+          },
+          categorias,
+          total_items: productos.length,
+          source: 'menu_collection'
+        }
+      });
     }
-
-    // Filtrar por categoría
-    if (categoria) {
-      menuFiltrado.categorias = menuFiltrado.categorias
-        .filter(cat => cat.categoria.toLowerCase().includes(categoria.toLowerCase()));
-    }
-
-    // Filtrar por vegetariano
-    if (vegetariano === 'true') {
-      menuFiltrado.categorias = menuFiltrado.categorias.map(cat => ({
-        ...cat,
-        items: cat.items.filter(item => item.vegetariano === true)
-      })).filter(cat => cat.items.length > 0);
-    }
-
-    const totalItems = menuFiltrado.categorias.reduce((total, cat) => total + cat.items.length, 0);
-
+    
+    // Procesar productos de la colección 'productos'
+    const productos = [];
+    productosSnapshot.forEach(doc => {
+      const data = doc.data();
+      productos.push({
+        id: doc.id,
+        id_producto: doc.id,
+        ...data
+      });
+    });
+    
+    // Agrupar por categorías
+    const categorias = agruparPorCategorias(productos);
+    
+    // Log de categorías para debug
+    console.log('📁 Categorías encontradas:', categorias.map(c => `${c.categoria} (${c.items.length} items)`));
+    
     res.json({
       success: true,
-      cafeteriaId,
-      menu: menuFiltrado,
-      total_items: totalItems,
-      filtros: {
-        horario: horario || 'todos',
-        categoria: categoria || 'todas',
-        vegetariano: vegetariano || 'todos'
+      data: {
+        cafeteria: {
+          id_cafeteria: cafeteriaId,
+          nombre: cafeteriaData.nombre
+        },
+        categorias,
+        total_items: productos.length,
+        source: 'productos_collection'
       }
     });
+    
   } catch (error) {
-    console.error('Error obteniendo menú:', error);
+    console.error('❌ Error en /menu/cafeteria/:id:', error);
     res.status(500).json({
       success: false,
-      message: 'Error del servidor'
+      message: 'Error al obtener el menú',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
-// @route   GET /api/menu/horario/:horario
-// @desc    Get menu items by horario (desayuno, almuerzo, cena, todo_dia)
-// @access  Public
-router.get('/horario/:horario', async (req, res) => {
-  try {
-    const horario = req.params.horario.toLowerCase();
-    const { cafeteria, vegetariano, max_precio } = req.query;
+// Función helper para agrupar productos por categoría
+function agruparPorCategorias(productos) {
+  const categoriasMap = new Map();
+  
+  productos.forEach(producto => {
+    const categoria = producto.categoria || 'Sin Categoría';
     
-    const itemsPorHorario = [];
+    if (!categoriasMap.has(categoria)) {
+      categoriasMap.set(categoria, []);
+    }
+    
+    // Formatear producto para el frontend
+    const productoFormateado = {
+      id: producto.id,
+      id_producto: producto.id_producto || producto.id,
+      nombre: producto.nombre,
+      descripcion: producto.descripcion || '',
+      precio: parseFloat(producto.precio) || 0,
+      imagen: producto.imagen || '/imagenes/producto-default.jpg',
+      categoria: producto.categoria,
+      horario: producto.horario || 'todo_dia',
+      tiempo_preparacion: producto.tiempo_preparacion || 15,
+      ingredientes: Array.isArray(producto.ingredientes) ? producto.ingredientes : [],
+      calorias: producto.calorias || null,
+      vegetariano: producto.vegetariano || false,
+      disponible: producto.disponible !== false, // default true
+      activo: producto.activo !== false
+    };
+    
+    categoriasMap.get(categoria).push(productoFormateado);
+  });
+  
+  // Convertir Map a Array con el formato esperado
+  const categorias = Array.from(categoriasMap.entries()).map(([categoria, items]) => ({
+    categoria,
+    items: items.sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }));
+  
+  // Ordenar categorías
+  const ordenCategorias = ['Desayunos', 'Almuerzos', 'Cenas', 'Bebidas', 'Snacks', 'Postres'];
+  categorias.sort((a, b) => {
+    const indexA = ordenCategorias.indexOf(a.categoria);
+    const indexB = ordenCategorias.indexOf(b.categoria);
+    
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    } else if (indexA !== -1) {
+      return -1;
+    } else if (indexB !== -1) {
+      return 1;
+    }
+    
+    return a.categoria.localeCompare(b.categoria);
+  });
+  
+  return categorias;
+}
 
-    // Determinar qué cafeterías buscar
-    const cafeteriasABuscar = cafeteria ? [cafeteria] : Object.keys(menuData);
-
-    cafeteriasABuscar.forEach(id => {
-      const menu = menuData[id];
-      if (!menu) return;
-
-      menu.categorias.forEach(categoria => {
-        categoria.items.forEach(item => {
-          if (item.disponible && (item.horario === horario || item.horario === 'todo_dia')) {
-            let incluir = true;
-
-            // Filtro vegetariano
-            if (vegetariano === 'true' && !item.vegetariano) {
-              incluir = false;
-            }
-
-            // Filtro precio máximo
-            if (max_precio && item.precio > parseFloat(max_precio)) {
-              incluir = false;
-            }
-
-            if (incluir) {
-              itemsPorHorario.push({
-                ...item,
-                cafeteriaId: parseInt(id)
-              });
-            }
-          }
-        });
+// @route   GET /api/menu/item/:id
+// @desc    Obtener producto individual
+// @access  Public
+router.get('/item/:id', async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const db = getDB();
+    
+    // Buscar en productos
+    let productoDoc = await db.collection('productos').doc(productId).get();
+    
+    // Si no está en productos, buscar en menu
+    if (!productoDoc.exists) {
+      productoDoc = await db.collection('menu').doc(productId).get();
+    }
+    
+    if (!productoDoc.exists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
       });
-    });
-
-    // Ordenar por precio
-    itemsPorHorario.sort((a, b) => a.precio - b.precio);
-
+    }
+    
+    const producto = { id: productoDoc.id, ...productoDoc.data() };
+    
     res.json({
       success: true,
-      horario,
-      items: itemsPorHorario,
-      total: itemsPorHorario.length,
-      filtros: {
-        cafeteria: cafeteria || 'todas',
-        vegetariano: vegetariano || 'todos',
-        max_precio: max_precio || 'sin_limite'
+      data: {
+        ...producto,
+        id_producto: producto.id
       }
     });
+    
   } catch (error) {
-    console.error('Error obteniendo menú por horario:', error);
+    console.error('Error obteniendo producto:', error);
     res.status(500).json({
       success: false,
-      message: 'Error del servidor'
+      message: 'Error al obtener el producto'
     });
   }
 });
 
 // @route   GET /api/menu/search
-// @desc    Search menu items
+// @desc    Buscar productos
 // @access  Public
 router.get('/search', async (req, res) => {
   try {
-    const { q: query, cafeteria, horario, vegetariano, max_precio, min_precio } = req.query;
+    const { q: query, cafeteria } = req.query;
     
     if (!query || query.trim().length < 2) {
       return res.status(400).json({
@@ -423,206 +244,193 @@ router.get('/search', async (req, res) => {
         message: 'La búsqueda debe tener al menos 2 caracteres'
       });
     }
-
-    const resultados = [];
+    
+    const db = getDB();
     const searchQuery = query.toLowerCase().trim();
-
-    // Determinar en qué cafeterías buscar
-    const cafeteriasABuscar = cafeteria ? [cafeteria] : Object.keys(menuData);
-
-    cafeteriasABuscar.forEach(id => {
-      const menu = menuData[id];
-      if (!menu) return;
-
-      menu.categorias.forEach(categoria => {
-        categoria.items.forEach(item => {
-          if (!item.disponible) return;
-
-          const matchNombre = item.nombre.toLowerCase().includes(searchQuery);
-          const matchDescripcion = item.descripcion.toLowerCase().includes(searchQuery);
-          const matchIngredientes = item.ingredientes.some(ing => 
-            ing.toLowerCase().includes(searchQuery)
-          );
-          const matchCategoria = item.categoria.toLowerCase().includes(searchQuery);
-
-          if (matchNombre || matchDescripcion || matchIngredientes || matchCategoria) {
-            let incluir = true;
-
-            // Aplicar filtros adicionales
-            if (horario && horario !== 'todo_dia' && item.horario !== horario && item.horario !== 'todo_dia') {
-              incluir = false;
-            }
-
-            if (vegetariano === 'true' && !item.vegetariano) {
-              incluir = false;
-            }
-
-            if (max_precio && item.precio > parseFloat(max_precio)) {
-              incluir = false;
-            }
-
-            if (min_precio && item.precio < parseFloat(min_precio)) {
-              incluir = false;
-            }
-
-            if (incluir) {
-              resultados.push({
-                ...item,
-                cafeteriaId: parseInt(id),
-                relevancia: calcularRelevancia(item, searchQuery)
-              });
-            }
-          }
+    const resultados = [];
+    
+    // Buscar en productos
+    let productosQuery = db.collection('productos').where('activo', '==', true);
+    if (cafeteria) {
+      productosQuery = productosQuery.where('id_cafeteria', '==', cafeteria);
+    }
+    
+    const productosSnapshot = await productosQuery.get();
+    
+    productosSnapshot.forEach(doc => {
+      const producto = { id: doc.id, ...doc.data() };
+      
+      if (producto.nombre && producto.nombre.toLowerCase().includes(searchQuery)) {
+        resultados.push({
+          ...producto,
+          id_producto: producto.id,
+          source: 'productos'
         });
-      });
-    });
-
-    // Ordenar por relevancia y luego por precio
-    resultados.sort((a, b) => {
-      if (a.relevancia !== b.relevancia) {
-        return b.relevancia - a.relevancia;
       }
-      return a.precio - b.precio;
     });
-
+    
+    // Si no hay resultados, buscar en menu
+    if (resultados.length === 0) {
+      let menuQuery = db.collection('menu').where('activo', '==', true);
+      if (cafeteria) {
+        menuQuery = menuQuery.where('cafeteria_id', '==', cafeteria);
+      }
+      
+      const menuSnapshot = await menuQuery.get();
+      
+      menuSnapshot.forEach(doc => {
+        const producto = { id: doc.id, ...doc.data() };
+        
+        if (producto.nombre && producto.nombre.toLowerCase().includes(searchQuery)) {
+          resultados.push({
+            ...producto,
+            id_producto: producto.id,
+            source: 'menu'
+          });
+        }
+      });
+    }
+    
     res.json({
       success: true,
-      query,
-      resultados: resultados.map(({ relevancia, ...item }) => item), // Remover relevancia del resultado
-      total: resultados.length,
-      filtros: {
-        cafeteria: cafeteria || 'todas',
-        horario: horario || 'todos',
-        vegetariano: vegetariano || 'todos',
-        max_precio: max_precio || 'sin_limite',
-        min_precio: min_precio || 'sin_limite'
+      data: {
+        productos: resultados,
+        total: resultados.length,
+        query
       }
     });
+    
   } catch (error) {
     console.error('Error en búsqueda:', error);
     res.status(500).json({
       success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
-
-// @route   GET /api/menu/item/:id
-// @desc    Get menu item by ID
-// @access  Public
-router.get('/item/:id', async (req, res) => {
-  try {
-    const itemId = parseInt(req.params.id);
-    let itemEncontrado = null;
-    let cafeteriaId = null;
-
-    // Buscar el item en todas las cafeterías
-    Object.entries(menuData).forEach(([id, menu]) => {
-      if (itemEncontrado) return;
-      
-      menu.categorias.forEach(categoria => {
-        const item = categoria.items.find(i => i.id === itemId);
-        if (item) {
-          itemEncontrado = item;
-          cafeteriaId = parseInt(id);
-        }
-      });
-    });
-
-    if (!itemEncontrado) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item no encontrado'
-      });
-    }
-
-    if (!itemEncontrado.disponible) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item no disponible actualmente'
-      });
-    }
-
-    res.json({
-      success: true,
-      item: {
-        ...itemEncontrado,
-        cafeteriaId
-      }
-    });
-  } catch (error) {
-    console.error('Error obteniendo item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
+      message: 'Error en la búsqueda'
     });
   }
 });
 
 // @route   GET /api/menu/categorias
-// @desc    Get all categories
+// @desc    Obtener todas las categorías
 // @access  Public
 router.get('/categorias', async (req, res) => {
   try {
     const { cafeteria } = req.query;
-    const categorias = new Set();
-
-    const cafeteriasABuscar = cafeteria ? [cafeteria] : Object.keys(menuData);
-
-    cafeteriasABuscar.forEach(id => {
-      const menu = menuData[id];
-      if (!menu) return;
-
-      menu.categorias.forEach(categoria => {
-        if (categoria.items.some(item => item.disponible)) {
-          categorias.add(categoria.categoria);
+    const db = getDB();
+    const categoriasSet = new Set();
+    
+    // Buscar en productos
+    let productosQuery = db.collection('productos').where('activo', '==', true);
+    if (cafeteria) {
+      productosQuery = productosQuery.where('id_cafeteria', '==', cafeteria);
+    }
+    
+    const productosSnapshot = await productosQuery.get();
+    productosSnapshot.forEach(doc => {
+      const producto = doc.data();
+      if (producto.categoria) {
+        categoriasSet.add(producto.categoria);
+      }
+    });
+    
+    // Si no hay categorías, buscar en menu
+    if (categoriasSet.size === 0) {
+      let menuQuery = db.collection('menu').where('activo', '==', true);
+      if (cafeteria) {
+        menuQuery = menuQuery.where('cafeteria_id', '==', cafeteria);
+      }
+      
+      const menuSnapshot = await menuQuery.get();
+      menuSnapshot.forEach(doc => {
+        const producto = doc.data();
+        if (producto.categoria) {
+          categoriasSet.add(producto.categoria);
         }
       });
-    });
-
+    }
+    
+    const categorias = Array.from(categoriasSet).sort();
+    
     res.json({
       success: true,
-      categorias: Array.from(categorias).sort(),
-      total: categorias.size
+      data: {
+        categorias,
+        total_categorias: categorias.length
+      }
     });
+    
   } catch (error) {
     console.error('Error obteniendo categorías:', error);
     res.status(500).json({
       success: false,
-      message: 'Error del servidor'
+      message: 'Error al obtener categorías'
     });
   }
 });
 
-// Función auxiliar para calcular relevancia en búsquedas
-function calcularRelevancia(item, query) {
-  let puntos = 0;
-  
-  // Coincidencia exacta en nombre (máxima relevancia)
-  if (item.nombre.toLowerCase() === query) {
-    puntos += 100;
-  } else if (item.nombre.toLowerCase().includes(query)) {
-    puntos += 50;
-  }
-  
-  // Coincidencia en descripción
-  if (item.descripcion.toLowerCase().includes(query)) {
-    puntos += 25;
-  }
-  
-  // Coincidencia en ingredientes
-  item.ingredientes.forEach(ingrediente => {
-    if (ingrediente.toLowerCase().includes(query)) {
-      puntos += 15;
+// @route   GET /api/menu/test/:id
+// @desc    Endpoint de prueba para debug
+// @access  Public
+router.get('/test/:id', async (req, res) => {
+  try {
+    const cafeteriaId = req.params.id;
+    const db = getDB();
+    
+    console.log(`🧪 TEST para cafetería ${cafeteriaId}`);
+    
+    // Verificar cafetería
+    const cafeteriaDoc = await db.collection('cafeterias').doc(cafeteriaId).get();
+    const cafeteriaExists = cafeteriaDoc.exists;
+    
+    // Contar productos en ambas colecciones
+    const productosCount = await db.collection('productos')
+      .where('id_cafeteria', '==', cafeteriaId)
+      .get();
+    
+    const menuCount = await db.collection('menu')
+      .where('cafeteria_id', '==', cafeteriaId)
+      .get();
+    
+    // Obtener un ejemplo de cada colección
+    let ejemploProducto = null;
+    let ejemploMenu = null;
+    
+    if (!productosCount.empty) {
+      const doc = productosCount.docs[0];
+      ejemploProducto = { id: doc.id, ...doc.data() };
     }
-  });
-  
-  // Coincidencia en categoría
-  if (item.categoria.toLowerCase().includes(query)) {
-    puntos += 10;
+    
+    if (!menuCount.empty) {
+      const doc = menuCount.docs[0];
+      ejemploMenu = { id: doc.id, ...doc.data() };
+    }
+    
+    res.json({
+      success: true,
+      test_results: {
+        cafeteria: {
+          id: cafeteriaId,
+          exists: cafeteriaExists,
+          data: cafeteriaExists ? cafeteriaDoc.data() : null
+        },
+        productos_collection: {
+          count: productosCount.size,
+          ejemplo: ejemploProducto
+        },
+        menu_collection: {
+          count: menuCount.size,
+          ejemplo: ejemploMenu
+        },
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Test falló:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
-  
-  return puntos;
-}
+});
 
-module.exports = router;    
+module.exports = router;

@@ -1,427 +1,337 @@
-// routes/pedidos.js
+// ===== routes/pedidos.js - MIGRADO A FIREBASE =====
 const express = require('express');
-const auth = require('../middleware/auth');
-const admin = require('../middleware/admin');
 const router = express.Router();
+const orderController = require('../controllers/orderController');
+const { auth, adminAuth } = require('../middleware/authMiddleware');
+const { generalLimiter } = require('../middleware/rateLimiter');
 
-// Simulación de base de datos en memoria (en producción sería MongoDB/Firebase)
-let pedidos = [];
-let pedidoCounter = 1;
+// Aplicar rate limiting
+router.use(generalLimiter);
+
+// ========== RUTAS DE PEDIDOS DE USUARIO ==========
+
+// @route   POST /api/pedidos/from-cart
+// @desc    Crear pedido desde carrito
+// @access  Private
+router.post('/from-cart', auth, orderController.createOrderFromCart);
 
 // @route   POST /api/pedidos
-// @desc    Create new order
+// @desc    Crear pedido directo (sin carrito)
 // @access  Private
-router.post('/', auth, async (req, res) => {
-  try {
-    const {
-      cafeteriaId,
-      items,
-      metodo_pago,
-      observaciones,
-      tipo_pedido = 'normal'
-    } = req.body;
-
-    // Validaciones básicas
-    if (!cafeteriaId || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Datos del pedido incompletos'
-      });
-    }
-
-    if (!metodo_pago || !['efectivo', 'tarjeta', 'transferencia'].includes(metodo_pago)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Método de pago inválido'
-      });
-    }
-
-    // Calcular total
-    const total = items.reduce((sum, item) => {
-      return sum + (item.precio * item.quantity);
-    }, 0);
-
-    // Crear pedido
-    const nuevoPedido = {
-      id: pedidoCounter++,
-      numero_orden: `UTP-${Date.now().toString().slice(-6)}`,
-      usuario: req.user.id,
-      usuario_email: req.user.email,
-      usuario_nombre: req.user.nombre,
-      cafeteriaId: parseInt(cafeteriaId),
-      items: items.map(item => ({
-        id: item.id,
-        nombre: item.nombre,
-        precio: item.precio,
-        quantity: item.quantity,
-        descripcion: item.descripcion || '',
-        categoria: item.categoria || '',
-        subtotal: item.precio * item.quantity
-      })),
-      total: parseFloat(total.toFixed(2)),
-      metodo_pago,
-      tipo_pedido,
-      observaciones: observaciones || '',
-      estado: 'pendiente',
-      fecha_pedido: new Date().toISOString(),
-      fecha_actualizacion: new Date().toISOString()
-    };
-
-    // Agregar información de la cafetería (simulado)
-    const cafeteriaInfo = {
-      1: { nombre: 'Cafetería Edificio 1', edificio: 'Edificio 1' },
-      2: { nombre: 'Cafetería Central', edificio: 'Cafetería Central' },
-      3: { nombre: 'Cafetería Edificio 3', edificio: 'Edificio 3' }
-    };
-    
-    nuevoPedido.cafeteria_info = cafeteriaInfo[cafeteriaId] || {
-      nombre: 'Cafetería Desconocida',
-      edificio: 'Desconocido'
-    };
-
-    // Guardar pedido
-    pedidos.push(nuevoPedido);
-
-    console.log(`Nuevo pedido creado: ${nuevoPedido.numero_orden} por ${req.user.email}`);
-
-    res.status(201).json({
-      success: true,
-      message: 'Pedido creado exitosamente',
-      pedido: nuevoPedido
-    });
-  } catch (error) {
-    console.error('Error creando pedido:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
+router.post('/', auth, orderController.createOrder);
 
 // @route   GET /api/pedidos
-// @desc    Get user orders
+// @desc    Obtener pedidos del usuario
 // @access  Private
-router.get('/', auth, async (req, res) => {
-  try {
-    const {
-      page = 1,
-      limit = 10,
-      estado,
-      fechaDesde,
-      fechaHasta
-    } = req.query;
-
-    // Filtrar pedidos del usuario
-    let pedidosUsuario = pedidos.filter(p => p.usuario === req.user.id);
-
-    // Aplicar filtros
-    if (estado) {
-      pedidosUsuario = pedidosUsuario.filter(p => p.estado === estado);
-    }
-
-    if (fechaDesde) {
-      const desde = new Date(fechaDesde);
-      pedidosUsuario = pedidosUsuario.filter(p => new Date(p.fecha_pedido) >= desde);
-    }
-
-    if (fechaHasta) {
-      const hasta = new Date(fechaHasta);
-      hasta.setHours(23, 59, 59, 999);
-      pedidosUsuario = pedidosUsuario.filter(p => new Date(p.fecha_pedido) <= hasta);
-    }
-
-    // Ordenar por fecha (más reciente primero)
-    pedidosUsuario.sort((a, b) => new Date(b.fecha_pedido) - new Date(a.fecha_pedido));
-
-    // Paginación
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const pedidosPaginados = pedidosUsuario.slice(startIndex, endIndex);
-
-    res.json({
-      success: true,
-      pedidos: pedidosPaginados,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(pedidosUsuario.length / limit),
-        total: pedidosUsuario.length
-      }
-    });
-  } catch (error) {
-    console.error('Error obteniendo pedidos:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
+router.get('/', auth, orderController.getUserOrders);
 
 // @route   GET /api/pedidos/:id
-// @desc    Get order by ID
+// @desc    Obtener pedido por ID
 // @access  Private
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const pedidoId = parseInt(req.params.id);
-    const pedido = pedidos.find(p => p.id === pedidoId);
-    
-    if (!pedido) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pedido no encontrado'
-      });
-    }
-
-    // Verificar que el pedido pertenezca al usuario (a menos que sea admin)
-    if (pedido.usuario !== req.user.id && req.user.rol !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para ver este pedido'
-      });
-    }
-
-    res.json({
-      success: true,
-      pedido
-    });
-  } catch (error) {
-    console.error('Error obteniendo pedido:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
-
-// @route   PUT /api/pedidos/:id/status
-// @desc    Update order status (Admin only)
-// @access  Private/Admin
-router.put('/:id/status', [auth, admin], async (req, res) => {
-  try {
-    const pedidoId = parseInt(req.params.id);
-    const { estado } = req.body;
-    
-    const estadosValidos = ['pendiente', 'en_proceso', 'por_retirar', 'retirado', 'completado', 'cancelado', 'expirado'];
-    
-    if (!estado || !estadosValidos.includes(estado)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Estado inválido'
-      });
-    }
-
-    const pedidoIndex = pedidos.findIndex(p => p.id === pedidoId);
-    
-    if (pedidoIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pedido no encontrado'
-      });
-    }
-
-    const pedidoAnterior = { ...pedidos[pedidoIndex] };
-    
-    // Actualizar estado
-    pedidos[pedidoIndex].estado = estado;
-    pedidos[pedidoIndex].fecha_actualizacion = new Date().toISOString();
-    
-    if (estado === 'completado' || estado === 'retirado') {
-      pedidos[pedidoIndex].fecha_completado = new Date().toISOString();
-    }
-
-    console.log(`Pedido ${pedidoId} actualizado de ${pedidoAnterior.estado} a ${estado}`);
-
-    res.json({
-      success: true,
-      message: `Pedido actualizado a ${estado}`,
-      pedido: pedidos[pedidoIndex]
-    });
-  } catch (error) {
-    console.error('Error actualizando pedido:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
+router.get('/:id', auth, orderController.getOrderById);
 
 // @route   DELETE /api/pedidos/:id
-// @desc    Cancel order
+// @desc    Cancelar pedido
 // @access  Private
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    const pedidoId = parseInt(req.params.id);
-    const pedidoIndex = pedidos.findIndex(p => p.id === pedidoId);
-    
-    if (pedidoIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Pedido no encontrado'
-      });
-    }
+router.delete('/:id', auth, orderController.cancelOrder);
 
-    const pedido = pedidos[pedidoIndex];
-
-    // Verificar permisos
-    if (pedido.usuario !== req.user.id && req.user.rol !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para cancelar este pedido'
-      });
-    }
-
-    // Solo se pueden cancelar pedidos pendientes o en proceso
-    if (!['pendiente', 'en_proceso'].includes(pedido.estado)) {
-      return res.status(400).json({
-        success: false,
-        message: 'No se puede cancelar un pedido en este estado'
-      });
-    }
-
-    // Actualizar estado en lugar de eliminar
-    pedidos[pedidoIndex].estado = 'cancelado';
-    pedidos[pedidoIndex].fecha_actualizacion = new Date().toISOString();
-    pedidos[pedidoIndex].fecha_cancelado = new Date().toISOString();
-
-    res.json({
-      success: true,
-      message: 'Pedido cancelado exitosamente',
-      pedido: pedidos[pedidoIndex]
-    });
-  } catch (error) {
-    console.error('Error cancelando pedido:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
-
-// @route   GET /api/pedidos/stats/user
-// @desc    Get user order statistics
-// @access  Private
-router.get('/stats/user', auth, async (req, res) => {
-  try {
-    const pedidosUsuario = pedidos.filter(p => p.usuario === req.user.id);
-    
-    const stats = {
-      total_pedidos: pedidosUsuario.length,
-      pedidos_completados: pedidosUsuario.filter(p => p.estado === 'completado').length,
-      pedidos_pendientes: pedidosUsuario.filter(p => ['pendiente', 'en_proceso', 'por_retirar'].includes(p.estado)).length,
-      pedidos_cancelados: pedidosUsuario.filter(p => p.estado === 'cancelado').length,
-      total_gastado: pedidosUsuario
-        .filter(p => p.estado === 'completado')
-        .reduce((sum, p) => sum + p.total, 0),
-      cafeteria_favorita: getFavoriteCafeteria(pedidosUsuario),
-      ultimo_pedido: pedidosUsuario.length > 0 
-        ? pedidosUsuario.sort((a, b) => new Date(b.fecha_pedido) - new Date(a.fecha_pedido))[0]
-        : null
-    };
-
-    res.json({
-      success: true,
-      stats
-    });
-  } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
-});
+// ========== RUTAS DE ADMINISTRACIÓN (ADMIN ONLY) ==========
 
 // @route   GET /api/pedidos/admin/all
-// @desc    Get all orders (Admin only)
+// @desc    Obtener todos los pedidos (Admin)
 // @access  Private/Admin
-router.get('/admin/all', [auth, admin], async (req, res) => {
-  try {
-    const {
-      page = 1,
-      limit = 20,
-      estado,
-      cafeteria,
-      fechaDesde,
-      fechaHasta
-    } = req.query;
+router.get('/admin/all', [auth, adminAuth], async (req, res) => {
+    try {
+        const { 
+            page = 1, 
+            limit = 20, 
+            estado, 
+            cafeteria, 
+            fecha_desde, 
+            fecha_hasta,
+            search 
+        } = req.query;
+        const { getDB } = require('../config/database');
+        const db = getDB();
 
-    let pedidosFiltrados = [...pedidos];
+        // Query base
+        let pedidosQuery = db.collection('pedidos');
 
-    // Aplicar filtros
-    if (estado) {
-      pedidosFiltrados = pedidosFiltrados.filter(p => p.estado === estado);
+        // Aplicar filtros
+        if (estado) {
+            pedidosQuery = pedidosQuery.where('estado', '==', estado);
+        }
+
+        if (cafeteria) {
+            pedidosQuery = pedidosQuery.where('id_cafeteria', '==', cafeteria);
+        }
+
+        // Ejecutar query
+        const pedidosSnapshot = await pedidosQuery
+            .orderBy('fecha_pedido', 'desc')
+            .limit(parseInt(limit))
+            .get();
+
+        let pedidos = [];
+        for (const pedidoDoc of pedidosSnapshot.docs) {
+            const pedido = { id: pedidoDoc.id, ...pedidoDoc.data() };
+            
+            // Obtener items del pedido
+            const itemsSnapshot = await pedidoDoc.ref.collection('items').get();
+            pedido.items = itemsSnapshot.docs.map(doc => doc.data());
+            
+            // Filtrar por fecha si se especifica
+            if (fecha_desde || fecha_hasta) {
+                const fechaPedido = pedido.fecha_pedido?.toDate();
+                if (fechaPedido) {
+                    if (fecha_desde && fechaPedido < new Date(fecha_desde)) continue;
+                    if (fecha_hasta && fechaPedido > new Date(fecha_hasta)) continue;
+                }
+            }
+            
+            // Filtrar por búsqueda de texto
+            if (search) {
+                const searchLower = search.toLowerCase();
+                const matchesSearch = 
+                    pedido.id.toLowerCase().includes(searchLower) ||
+                    pedido.cafeteria_nombre?.toLowerCase().includes(searchLower) ||
+                    pedido.usuario_email?.toLowerCase().includes(searchLower);
+                
+                if (!matchesSearch) continue;
+            }
+            
+            // Obtener información del usuario
+            if (pedido.id_usuario) {
+                try {
+                    const usuarioDoc = await db.collection('usuarios').doc(pedido.id_usuario).get();
+                    if (usuarioDoc.exists) {
+                        const usuario = usuarioDoc.data();
+                        pedido.usuario_info = {
+                            nombre: usuario.nombre,
+                            apellido: usuario.apellido,
+                            correo: usuario.correo
+                        };
+                    }
+                } catch (userError) {
+                    console.error('Error obteniendo usuario:', userError);
+                }
+            }
+            
+            // Convertir timestamps
+            if (pedido.fecha_pedido?.toDate) {
+                pedido.fecha_pedido = pedido.fecha_pedido.toDate();
+            }
+            if (pedido.fecha_estimada) {
+                pedido.fecha_estimada = new Date(pedido.fecha_estimada);
+            }
+            
+            pedidos.push(pedido);
+        }
+
+        // Obtener total para paginación (simplificado)
+        const totalSnapshot = await db.collection('pedidos').get();
+        const total = totalSnapshot.size;
+
+        res.json({
+            success: true,
+            data: pedidos,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / limit)
+            },
+            filtros: {
+                estado: estado || 'todos',
+                cafeteria: cafeteria || 'todas',
+                fecha_desde,
+                fecha_hasta,
+                search: search || ''
+            }
+        });
+
+    } catch (error) {
+        console.error('Error obteniendo pedidos (admin):', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'Error obteniendo los pedidos'
+        });
     }
-
-    if (cafeteria) {
-      pedidosFiltrados = pedidosFiltrados.filter(p => p.cafeteriaId === parseInt(cafeteria));
-    }
-
-    if (fechaDesde) {
-      const desde = new Date(fechaDesde);
-      pedidosFiltrados = pedidosFiltrados.filter(p => new Date(p.fecha_pedido) >= desde);
-    }
-
-    if (fechaHasta) {
-      const hasta = new Date(fechaHasta);
-      hasta.setHours(23, 59, 59, 999);
-      pedidosFiltrados = pedidosFiltrados.filter(p => new Date(p.fecha_pedido) <= hasta);
-    }
-
-    // Ordenar por fecha (más reciente primero)
-    pedidosFiltrados.sort((a, b) => new Date(b.fecha_pedido) - new Date(a.fecha_pedido));
-
-    // Paginación
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
-    const pedidosPaginados = pedidosFiltrados.slice(startIndex, endIndex);
-
-    res.json({
-      success: true,
-      pedidos: pedidosPaginados,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(pedidosFiltrados.length / limit),
-        total: pedidosFiltrados.length
-      },
-      filtros: {
-        estado,
-        cafeteria,
-        fechaDesde,
-        fechaHasta
-      }
-    });
-  } catch (error) {
-    console.error('Error obteniendo pedidos (admin):', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error del servidor'
-    });
-  }
 });
 
-// Función auxiliar para obtener cafetería favorita
-function getFavoriteCafeteria(pedidosUsuario) {
-  if (pedidosUsuario.length === 0) return null;
-  
-  const contadorCafeterias = {};
-  pedidosUsuario.forEach(pedido => {
-    const id = pedido.cafeteriaId;
-    contadorCafeterias[id] = (contadorCafeterias[id] || 0) + 1;
-  });
-  
-  const cafeteriaFavoritaId = Object.keys(contadorCafeterias)
-    .reduce((a, b) => contadorCafeterias[a] > contadorCafeterias[b] ? a : b);
-  
-  const cafeteriaNames = {
-    1: 'Cafetería Edificio 1',
-    2: 'Cafetería Central',
-    3: 'Cafetería Edificio 3'
-  };
-  
-  return {
-    id: parseInt(cafeteriaFavoritaId),
-    nombre: cafeteriaNames[cafeteriaFavoritaId] || 'Desconocida',
-    pedidos: contadorCafeterias[cafeteriaFavoritaId]
-  };
-}
+// @route   PUT /api/pedidos/admin/:id/status
+// @desc    Actualizar estado de pedido (Admin)
+// @access  Private/Admin
+router.put('/admin/:id/status', [auth, adminAuth], async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { estado, observaciones } = req.body;
+        const { getDB, serverTimestamp } = require('../config/database');
+        const db = getDB();
+
+        const estadosValidos = ['Pendiente', 'Confirmado', 'En Preparación', 'Por Retirar', 'Finalizado', 'Cancelado'];
+        
+        if (!estado || !estadosValidos.includes(estado)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Estado inválido',
+                message: 'El estado debe ser uno de: ' + estadosValidos.join(', ')
+            });
+        }
+
+        const pedidoDoc = await db.collection('pedidos').doc(id).get();
+        
+        if (!pedidoDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                error: 'Pedido no encontrado',
+                message: 'No existe un pedido con ese ID'
+            });
+        }
+
+        const updateData = {
+            estado,
+            fecha_actualizacion: serverTimestamp(),
+            actualizado_por: req.user.id
+        };
+
+        if (observaciones) {
+            updateData.observaciones_admin = observaciones;
+        }
+
+        if (estado === 'Finalizado') {
+            updateData.fecha_entrega = serverTimestamp();
+        }
+
+        await pedidoDoc.ref.update(updateData);
+
+        // Obtener pedido actualizado
+        const updatedPedidoDoc = await db.collection('pedidos').doc(id).get();
+        const updatedPedido = { id: updatedPedidoDoc.id, ...updatedPedidoDoc.data() };
+
+        res.json({
+            success: true,
+            message: `Pedido actualizado a: ${estado}`,
+            data: updatedPedido
+        });
+
+    } catch (error) {
+        console.error('Error actualizando estado de pedido:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'Error actualizando el estado del pedido'
+        });
+    }
+});
+
+// @route   GET /api/pedidos/admin/stats
+// @desc    Estadísticas de pedidos (Admin)
+// @access  Private/Admin
+router.get('/admin/stats', [auth, adminAuth], async (req, res) => {
+    try {
+        const { periodo = '30d' } = req.query;
+        const { getDB } = require('../config/database');
+        const db = getDB();
+
+        // Calcular fecha de inicio según período
+        let fechaInicio = new Date();
+        switch (periodo) {
+            case '7d':
+                fechaInicio.setDate(fechaInicio.getDate() - 7);
+                break;
+            case '30d':
+                fechaInicio.setDate(fechaInicio.getDate() - 30);
+                break;
+            case '90d':
+                fechaInicio.setDate(fechaInicio.getDate() - 90);
+                break;
+            default:
+                fechaInicio.setDate(fechaInicio.getDate() - 30);
+        }
+
+        // Obtener pedidos del período
+        const pedidosSnapshot = await db.collection('pedidos')
+            .where('fecha_pedido', '>=', fechaInicio)
+            .get();
+
+        let totalPedidos = 0;
+        let pedidosPendientes = 0;
+        let pedidosFinalizados = 0;
+        let pedidosCancelados = 0;
+        let ingresosTotales = 0;
+        const pedidosPorDia = new Map();
+        const pedidosPorCafeteria = new Map();
+
+        pedidosSnapshot.docs.forEach(doc => {
+            const pedido = doc.data();
+            totalPedidos++;
+
+            switch (pedido.estado) {
+                case 'Pendiente':
+                case 'Confirmado':
+                case 'En Preparación':
+                case 'Por Retirar':
+                    pedidosPendientes++;
+                    break;
+                case 'Finalizado':
+                    pedidosFinalizados++;
+                    ingresosTotales += pedido.total || 0;
+                    break;
+                case 'Cancelado':
+                    pedidosCancelados++;
+                    break;
+            }
+
+            // Agrupar por día
+            if (pedido.fecha_pedido) {
+                const fecha = pedido.fecha_pedido.toDate();
+                const fechaKey = fecha.toISOString().split('T')[0];
+                pedidosPorDia.set(fechaKey, (pedidosPorDia.get(fechaKey) || 0) + 1);
+            }
+
+            // Agrupar por cafetería
+            if (pedido.cafeteria_nombre) {
+                const current = pedidosPorCafeteria.get(pedido.cafeteria_nombre) || { pedidos: 0, ingresos: 0 };
+                pedidosPorCafeteria.set(pedido.cafeteria_nombre, {
+                    pedidos: current.pedidos + 1,
+                    ingresos: current.ingresos + (pedido.estado === 'Finalizado' ? (pedido.total || 0) : 0)
+                });
+            }
+        });
+
+        const stats = {
+            resumen: {
+                total_pedidos: totalPedidos,
+                pedidos_pendientes: pedidosPendientes,
+                pedidos_finalizados: pedidosFinalizados,
+                pedidos_cancelados: pedidosCancelados,
+                ingresos_totales: ingresosTotales,
+                ticket_promedio: pedidosFinalizados > 0 ? ingresosTotales / pedidosFinalizados : 0
+            },
+            pedidos_por_dia: Array.from(pedidosPorDia.entries())
+                .map(([fecha, pedidos]) => ({ fecha, pedidos }))
+                .sort((a, b) => a.fecha.localeCompare(b.fecha)),
+            pedidos_por_cafeteria: Array.from(pedidosPorCafeteria.entries())
+                .map(([cafeteria, data]) => ({ cafeteria, ...data }))
+                .sort((a, b) => b.pedidos - a.pedidos),
+            periodo_analizado: periodo
+        };
+
+        res.json({
+            success: true,
+            data: stats
+        });
+
+    } catch (error) {
+        console.error('Error obteniendo estadísticas:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: 'Error obteniendo estadísticas'
+        });
+    }
+});
 
 module.exports = router;
