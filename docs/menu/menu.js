@@ -62,7 +62,7 @@ const cafeteriaDataFallback = {
         id_cafeteria: 1,
         nombre: 'CAFETERÍA #1',
         descripcion: 'Edificio No. 1',
-        productos: [
+        categoria: [
             {
                 id_producto: 1,
                 nombre_producto: 'Desayuno Panameño',
@@ -85,7 +85,7 @@ const cafeteriaDataFallback = {
         id_cafeteria: 2,
         nombre: 'CAFETERÍA #2',
         descripcion: 'Edificio No. 2',
-        productos: [
+        categoria: [
             {
                 id_producto: 3,
                 nombre_producto: 'Sandwich de Pollo',
@@ -100,7 +100,7 @@ const cafeteriaDataFallback = {
         id_cafeteria: 3,
         nombre: 'CAFETERÍA #3',
         descripcion: 'Edificio No. 3',
-        productos: [
+        categoria: [
             {
                 id_producto: 4,
                 nombre_producto: 'Arroz con Pollo',
@@ -171,15 +171,15 @@ async function showMenu(cafeteriaId) {
     
     try {
         // 🔥 USANDO TU API REAL
-        const response = await apiGet(`/productos/${cafeteriaId}`);
+        const response = await apiGet(`/categorias/${cafeteriaId}`);
         
-        if (response.success && response.productos) {
+        if (response.success && response.categoria) {
             // Transformar datos de tu API al formato que necesita el frontend
             cafeteriaData = {
                 id_cafeteria: cafeteriaId,
                 nombre: `CAFETERÍA #${cafeteriaId}`,
                 descripcion: `Edificio No. ${cafeteriaId}`,
-                productos: response.productos
+                categoria: response.categoria
             };
         } else {
             throw new Error('No se encontraron productos');

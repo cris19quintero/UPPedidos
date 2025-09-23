@@ -1,4 +1,4 @@
-// ===== controllers/cartController.js - MIGRADO A FIREBASE =====
+// ===== controllers/cartController.js - CORREGIDO PARA PRODUCTOS =====
 const { getDB, generateId, serverTimestamp, runTransaction } = require('../config/database');
 const { successResponse, errorResponse, calculateCartTotal } = require('../utils/helpers');
 
@@ -37,7 +37,7 @@ const getCart = async (req, res) => {
         for (const itemDoc of itemsSnapshot.docs) {
             const item = itemDoc.data();
             
-            // Obtener información del producto
+            // 🔥 CAMBIO: Obtener información del PRODUCTO (no categoria)
             const productoDoc = await db.collection('productos').doc(item.id_producto).get();
             if (productoDoc.exists) {
                 const producto = productoDoc.data();
@@ -100,7 +100,7 @@ const addToCart = async (req, res) => {
 
         // Usar transacción para operaciones atómicas
         await runTransaction(async (transaction) => {
-            // Verificar producto
+            // 🔥 CAMBIO: Verificar PRODUCTO (no categoria)
             const productoRef = db.collection('productos').doc(id_producto);
             const productoDoc = await transaction.get(productoRef);
 
@@ -177,7 +177,7 @@ const addToCart = async (req, res) => {
 
                 transaction.set(itemRef, {
                     id_item: itemId,
-                    id_producto,
+                    id_producto, // 🔥 CAMBIO: usar id_producto en lugar de id_categoria
                     cantidad,
                     precio_unitario: productData.precio,
                     subtotal,
@@ -229,7 +229,7 @@ const updateCartItem = async (req, res) => {
 
             // Buscar item en el carrito
             const itemQuery = await carritoDoc.ref.collection('items')
-                .where('id_producto', '==', id_producto)
+                .where('id_producto', '==', id_producto) // 🔥 CAMBIO: usar id_producto
                 .limit(1)
                 .get();
 
@@ -237,7 +237,7 @@ const updateCartItem = async (req, res) => {
                 throw new Error('Item no encontrado en el carrito');
             }
 
-            // Obtener precio actual del producto
+            // 🔥 CAMBIO: Obtener precio actual del PRODUCTO
             const productoRef = db.collection('productos').doc(id_producto);
             const productoDoc = await transaction.get(productoRef);
             
@@ -295,7 +295,7 @@ const removeFromCart = async (req, res) => {
 
             // Buscar y eliminar item
             const itemQuery = await carritoDoc.ref.collection('items')
-                .where('id_producto', '==', id_producto)
+                .where('id_producto', '==', id_producto) // 🔥 CAMBIO: usar id_producto
                 .limit(1)
                 .get();
 
@@ -385,7 +385,7 @@ const getCartData = async (carritoId, db) => {
         for (const itemDoc of itemsSnapshot.docs) {
             const item = itemDoc.data();
             
-            // Obtener información del producto
+            // 🔥 CAMBIO: Obtener información del PRODUCTO
             const productoDoc = await db.collection('productos').doc(item.id_producto).get();
             if (productoDoc.exists) {
                 const producto = productoDoc.data();
@@ -436,4 +436,3 @@ module.exports = {
     removeFromCart,
     clearCart
 };
-

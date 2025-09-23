@@ -1,4 +1,4 @@
-// routes/menu.js - VERSION CORREGIDA QUE FUNCIONA
+// routes/menu.js - VERSION CORREGIDA CON PRODUCTOS
 const express = require('express');
 const router = express.Router();
 const { getDB } = require('../config/database');
@@ -28,8 +28,7 @@ router.get('/cafeteria/:id', async (req, res) => {
     const cafeteriaData = cafeteriaDoc.data();
     console.log(`✅ Cafetería: ${cafeteriaData.nombre}`);
     
-    // Buscar productos de esta cafetería
-    // IMPORTANTE: Verificar el nombre exacto del campo en tu Firebase
+    // 🔥 CAMBIO PRINCIPAL: Solo buscar en 'productos'
     const productosSnapshot = await db.collection('productos')
       .where('id_cafeteria', '==', cafeteriaId)
       .where('activo', '==', true)
@@ -38,45 +37,6 @@ router.get('/cafeteria/:id', async (req, res) => {
     console.log(`📊 Productos encontrados: ${productosSnapshot.size}`);
     
     if (productosSnapshot.empty) {
-      // Si no hay productos en 'productos', intentar en 'menu'
-      console.log('🔄 Buscando en colección alternativa "menu"...');
-      
-      const menuSnapshot = await db.collection('menu')
-        .where('cafeteria_id', '==', cafeteriaId)
-        .where('activo', '==', true)
-        .get();
-      
-      console.log(`📊 Productos en menu: ${menuSnapshot.size}`);
-      
-      if (menuSnapshot.empty) {
-        return res.json({
-          success: true,
-          data: {
-            cafeteria: {
-              id_cafeteria: cafeteriaId,
-              nombre: cafeteriaData.nombre
-            },
-            categorias: [],
-            total_items: 0,
-            mensaje: 'No hay productos disponibles en este momento'
-          }
-        });
-      }
-      
-      // Procesar productos de la colección 'menu'
-      const productos = [];
-      menuSnapshot.forEach(doc => {
-        const data = doc.data();
-        productos.push({
-          id: doc.id,
-          id_producto: doc.id,
-          ...data
-        });
-      });
-      
-      // Agrupar por categorías
-      const categorias = agruparPorCategorias(productos);
-      
       return res.json({
         success: true,
         data: {
@@ -84,14 +44,14 @@ router.get('/cafeteria/:id', async (req, res) => {
             id_cafeteria: cafeteriaId,
             nombre: cafeteriaData.nombre
           },
-          categorias,
-          total_items: productos.length,
-          source: 'menu_collection'
+          categorias: [],
+          total_items: 0,
+          mensaje: 'No hay productos disponibles en este momento'
         }
       });
     }
     
-    // Procesar productos de la colección 'productos'
+    // Procesar productos
     const productos = [];
     productosSnapshot.forEach(doc => {
       const data = doc.data();
@@ -144,7 +104,7 @@ function agruparPorCategorias(productos) {
     
     // Formatear producto para el frontend
     const productoFormateado = {
-      id: producto.id,
+      id: producto.id,  
       id_producto: producto.id_producto || producto.id,
       nombre: producto.nombre,
       descripcion: producto.descripcion || '',
@@ -170,7 +130,7 @@ function agruparPorCategorias(productos) {
   }));
   
   // Ordenar categorías
-  const ordenCategorias = ['Desayunos', 'Almuerzos', 'Cenas', 'Bebidas', 'Snacks', 'Postres'];
+  const ordenCategorias = ['Desayunos', 'Almuerzos', 'Cenas', 'Sandwiches', 'Bebidas', 'Snacks', 'Postres'];
   categorias.sort((a, b) => {
     const indexA = ordenCategorias.indexOf(a.categoria);
     const indexB = ordenCategorias.indexOf(b.categoria);
@@ -197,13 +157,8 @@ router.get('/item/:id', async (req, res) => {
     const productId = req.params.id;
     const db = getDB();
     
-    // Buscar en productos
-    let productoDoc = await db.collection('productos').doc(productId).get();
-    
-    // Si no está en productos, buscar en menu
-    if (!productoDoc.exists) {
-      productoDoc = await db.collection('menu').doc(productId).get();
-    }
+    // Solo buscar en productos
+    const productoDoc = await db.collection('productos').doc(productId).get();
     
     if (!productoDoc.exists) {
       return res.status(404).json({
@@ -249,7 +204,7 @@ router.get('/search', async (req, res) => {
     const searchQuery = query.toLowerCase().trim();
     const resultados = [];
     
-    // Buscar en productos
+    // Solo buscar en productos
     let productosQuery = db.collection('productos').where('activo', '==', true);
     if (cafeteria) {
       productosQuery = productosQuery.where('id_cafeteria', '==', cafeteria);
@@ -268,28 +223,6 @@ router.get('/search', async (req, res) => {
         });
       }
     });
-    
-    // Si no hay resultados, buscar en menu
-    if (resultados.length === 0) {
-      let menuQuery = db.collection('menu').where('activo', '==', true);
-      if (cafeteria) {
-        menuQuery = menuQuery.where('cafeteria_id', '==', cafeteria);
-      }
-      
-      const menuSnapshot = await menuQuery.get();
-      
-      menuSnapshot.forEach(doc => {
-        const producto = { id: doc.id, ...doc.data() };
-        
-        if (producto.nombre && producto.nombre.toLowerCase().includes(searchQuery)) {
-          resultados.push({
-            ...producto,
-            id_producto: producto.id,
-            source: 'menu'
-          });
-        }
-      });
-    }
     
     res.json({
       success: true,
@@ -318,7 +251,7 @@ router.get('/categorias', async (req, res) => {
     const db = getDB();
     const categoriasSet = new Set();
     
-    // Buscar en productos
+    // Solo buscar en productos
     let productosQuery = db.collection('productos').where('activo', '==', true);
     if (cafeteria) {
       productosQuery = productosQuery.where('id_cafeteria', '==', cafeteria);
@@ -331,22 +264,6 @@ router.get('/categorias', async (req, res) => {
         categoriasSet.add(producto.categoria);
       }
     });
-    
-    // Si no hay categorías, buscar en menu
-    if (categoriasSet.size === 0) {
-      let menuQuery = db.collection('menu').where('activo', '==', true);
-      if (cafeteria) {
-        menuQuery = menuQuery.where('cafeteria_id', '==', cafeteria);
-      }
-      
-      const menuSnapshot = await menuQuery.get();
-      menuSnapshot.forEach(doc => {
-        const producto = doc.data();
-        if (producto.categoria) {
-          categoriasSet.add(producto.categoria);
-        }
-      });
-    }
     
     const categorias = Array.from(categoriasSet).sort();
     
@@ -381,27 +298,17 @@ router.get('/test/:id', async (req, res) => {
     const cafeteriaDoc = await db.collection('cafeterias').doc(cafeteriaId).get();
     const cafeteriaExists = cafeteriaDoc.exists;
     
-    // Contar productos en ambas colecciones
+    // Contar productos
     const productosCount = await db.collection('productos')
       .where('id_cafeteria', '==', cafeteriaId)
       .get();
     
-    const menuCount = await db.collection('menu')
-      .where('cafeteria_id', '==', cafeteriaId)
-      .get();
-    
-    // Obtener un ejemplo de cada colección
+    // Obtener un ejemplo
     let ejemploProducto = null;
-    let ejemploMenu = null;
     
     if (!productosCount.empty) {
       const doc = productosCount.docs[0];
       ejemploProducto = { id: doc.id, ...doc.data() };
-    }
-    
-    if (!menuCount.empty) {
-      const doc = menuCount.docs[0];
-      ejemploMenu = { id: doc.id, ...doc.data() };
     }
     
     res.json({
@@ -415,10 +322,6 @@ router.get('/test/:id', async (req, res) => {
         productos_collection: {
           count: productosCount.size,
           ejemplo: ejemploProducto
-        },
-        menu_collection: {
-          count: menuCount.size,
-          ejemplo: ejemploMenu
         },
         timestamp: new Date().toISOString()
       }

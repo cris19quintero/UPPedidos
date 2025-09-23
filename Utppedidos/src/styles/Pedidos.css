@@ -1,4 +1,4 @@
-/* src/styles/Pedidos.css - Basado en el diseño HTML original */
+/* src/pages/Pedidos.css - BASADO EN TU REFERENCIA */
 
 :root {
     --primary-color: #8A2BE2;
@@ -6,7 +6,7 @@
     --accent-color: #4B0082;
     --grey-light: #f0f0f0;
     --grey-dark: #707070;
-    --cafe1-color: #ff9e80;
+    --cafe1-color:#ff9e80 ;
     --cafe2-color: #80d8ff;
     --cafe3-color: #8adc9d;
     --success-color: #4CAF50;
@@ -18,8 +18,124 @@
     --light-gray: #f5f5f5;
     --gray: #e0e0e0;
     --text-dark: #333333;
+    --cafeteria1-color: #ff9e80;
+    --cafeteria1-dark: #ff6e40;
+    --cafeteria1-light: #ffccbc;
+    --cafeteria2-color: #80d8ff;
+    --cafeteria2-dark: #40c4ff;
+    --cafeteria2-light: #b3e5fc;
+    --cafeteria3-color: #8adc9d;
+    --cafeteria3-dark: #5beda7;
+    --cafeteria3-light: #8ffc97;
 }
 
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+/* Header y navegación */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    flex: 1;
+}
+
+.header-container h2 {
+    color: var(--primary-color);
+    text-align: center;
+    font-size: 1.8rem;
+    margin: 0;
+}
+
+.back-btn {
+    position: absolute;
+    left: 0;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--grey-light);
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 20px;
+}
+
+.nav-button {
+    text-decoration: none;
+    color: var(--text-dark);
+    position: relative;
+}
+
+.icon-container {
+    background-color: var(--light-gray);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.nav-button:hover .icon-container {
+    background-color: var(--primary-light);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(123, 31, 162, 0.3);
+}
+
+.cart-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Main content */
 main {
     max-width: 1200px;
     margin: 20px auto;
@@ -50,19 +166,7 @@ main {
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.pedido-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.pedido-img {
-    width: 120px;
-    height: 120px;
-    object-fit: cover;
-    flex-shrink: 0;
+    padding: 0;
 }
 
 .pedido-info {
@@ -80,53 +184,43 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    color: #333;
 }
 
 .pedido-quantity {
     color: var(--primary-color);
     font-weight: bold;
-    font-size: 1rem;
 }
 
 .pedido-desc {
     color: var(--grey-dark);
     font-size: 0.9rem;
     margin-bottom: 8px;
-    line-height: 1.4;
 }
 
 .pedido-cafeteria, 
 .pedido-hora {
     font-size: 0.9rem;
-    margin-bottom: 3px;
-    color: #555;
+    margin-bottom: 5px;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
 }
 
 .pedido-cafeteria i,
 .pedido-hora i {
     width: 16px;
-    color: var(--primary-color);
-}
-
-.pedido-actions {
-    margin-top: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    text-align: center;
 }
 
 .pedido-status {
-    padding: 5px 12px;
+    margin-top: 10px;
+    padding: 5px 10px;
     border-radius: 15px;
     font-size: 0.8rem;
+    display: inline-block;
     font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    width: fit-content;
 }
 
 .status-pendiente {
@@ -139,44 +233,58 @@ main {
     color: white;
 }
 
-.mark-retirado-btn {
-    background-color: var(--success-color);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 500;
+/* Estilos de cafeterías */
+.cafeteria-1 {
+    color: var(--cafe1-color);
 }
 
-.mark-retirado-btn:hover {
-    background-color: #45a049;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+.cafeteria-2 {
+    color: var(--cafe2-color);
 }
 
-.mark-retirado-btn i {
-    font-size: 0.8rem;
+.cafeteria-3 {
+    color: var(--cafe3-color);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    main {
-        padding: 0 15px;
+    .navbar {
+        padding: 10px 15px;
     }
     
-    .pedido-img {
-        width: 100px;
-        height: 100px;
+    .header-container {
+        padding: 10px;
+    }
+    
+    .header-container h2 {
+        font-size: 1.5rem;
+    }
+    
+    .nav-buttons {
+        gap: 10px;
+    }
+    
+    .icon-container {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+    
+    main {
+        padding: 0 15px;
+        margin: 15px auto;
     }
     
     .pedidos-section h2 {
         font-size: 1.2rem;
+    }
+    
+    .pedido-item {
+        margin-bottom: 10px;
+    }
+    
+    .pedido-info {
+        padding: 12px;
     }
     
     .pedido-title {
@@ -186,27 +294,27 @@ main {
         gap: 5px;
     }
     
-    .pedido-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .mark-retirado-btn {
-        justify-content: center;
+    .pedido-quantity {
+        align-self: flex-end;
     }
 }
 
 @media (max-width: 480px) {
-    .pedido-item {
-        flex-direction: column;
+    .back-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
     }
     
-    .pedido-img {
-        width: 100%;
-        height: 150px;
+    .icon-container {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
     }
     
-    .pedido-info {
-        padding: 12px;
+    .cart-badge {
+        width: 18px;
+        height: 18px;
+        font-size: 0.6rem;
     }
 }

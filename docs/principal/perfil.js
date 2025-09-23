@@ -192,7 +192,7 @@ function loadOrderHistory() {
             <div>Total: $${totalPedido.toFixed(2)}</div>
             <div>Estado: ${order.estado || 'Completado'}</div>
             <div class="order-items">
-                <strong>Productos:</strong>
+                <strong>categoria:</strong>
                 <ul>
                     ${order.items.map(item => `
                         <li>${item.name} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>

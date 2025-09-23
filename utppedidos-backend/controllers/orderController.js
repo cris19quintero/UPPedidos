@@ -1,8 +1,9 @@
-// ===== controllers/orderController.js - Migrado a Firebase =====
+// ===== controllers/orderController.js - CÓDIGO COMPLETO CORREGIDO =====
 const { getDB, generateId, serverTimestamp, runTransaction } = require('../config/database');
 const { successResponse, errorResponse } = require('../utils/helpers');
+const admin = require('firebase-admin');
 
-// Crear pedido desde carrito
+// Crear pedido desde carrito persistente
 const createOrderFromCart = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -75,6 +76,11 @@ const createOrderFromCart = async (req, res) => {
                 total += item.subtotal;
             }
 
+            // Agregar cargo express si aplica
+            if (tipo_pedido === 'express') {
+                total += 1.00;
+            }
+
             // Verificar cafetería
             const cafeteriaRef = db.collection('cafeterias').doc(carritoData.id_cafeteria);
             const cafeteriaDoc = await transaction.get(cafeteriaRef);
@@ -97,7 +103,7 @@ const createOrderFromCart = async (req, res) => {
                 tipo_pedido,
                 observaciones: observaciones || '',
                 fecha_pedido: serverTimestamp(),
-                fecha_estimada: new Date(Date.now() + (tiempoEstimado * 60000)), // minutos a ms
+                fecha_estimada: new Date(Date.now() + (tiempoEstimado * 60000)),
                 tiempo_estimado: tiempoEstimado,
                 items_count: items.length,
                 cafeteria_nombre: cafeteriaDoc.data().nombre
@@ -119,12 +125,12 @@ const createOrderFromCart = async (req, res) => {
             // Desactivar carrito
             transaction.update(carritoDoc.ref, { activo: false });
 
-            // Actualizar estadísticas del producto (opcional)
+            // Actualizar estadísticas del producto
             items.forEach(item => {
                 const productoRef = db.collection('productos').doc(item.id_producto);
                 transaction.update(productoRef, {
-                    ventas_totales: db.FieldValue.increment(item.cantidad),
-                    pedidos_count: db.FieldValue.increment(1),
+                    ventas_totales: admin.firestore.FieldValue.increment(item.cantidad),
+                    pedidos_count: admin.firestore.FieldValue.increment(1),
                     ultima_venta: serverTimestamp()
                 });
             });
@@ -144,15 +150,16 @@ const createOrderFromCart = async (req, res) => {
     }
 };
 
-// Crear pedido directo (sin carrito)
-const createOrder = async (req, res) => {
+// Crear pedido directo (sin carrito) - PARA CARTMODAL
+const createDirectOrder = async (req, res) => {
     try {
-        const userId = req.user.id;
-        const { items, metodo_pago, observaciones, tipo_pedido = 'normal' } = req.body;
+        const userId = req.user?.id || 'guest';
+        const { items, metodo_pago, observaciones, tipo_pedido = 'normal', usuario_info } = req.body;
         const db = getDB();
 
+        // Validaciones básicas
         if (!items || !Array.isArray(items) || items.length === 0) {
-            const { response, statusCode } = errorResponse('Items requeridos');
+            const { response, statusCode } = errorResponse('Debe incluir al menos un producto en el pedido');
             return res.status(statusCode).json(response);
         }
 
@@ -171,33 +178,47 @@ const createOrder = async (req, res) => {
             let id_cafeteria;
 
             for (const item of items) {
-                const productoRef = db.collection('productos').doc(item.id_producto);
+                const productId = item.id_producto || item.id;
+                const cantidad = item.cantidad || item.quantity || 1;
+
+                if (!productId) {
+                    throw new Error('Cada item debe tener un id_producto válido');
+                }
+
+                const productoRef = db.collection('productos').doc(productId);
                 const productoDoc = await transaction.get(productoRef);
                 
                 if (!productoDoc.exists || !productoDoc.data().activo) {
-                    throw new Error(`Producto ${item.id_producto} no encontrado o inactivo`);
+                    throw new Error(`Producto ${productId} no encontrado o inactivo`);
                 }
                 
                 const producto = productoDoc.data();
                 
+                // Verificar que todos los productos sean de la misma cafetería
                 if (!id_cafeteria) {
                     id_cafeteria = producto.id_cafeteria;
                 } else if (id_cafeteria !== producto.id_cafeteria) {
                     throw new Error('Todos los productos deben ser de la misma cafetería');
                 }
                 
-                const subtotal = producto.precio * item.cantidad;
+                const subtotal = producto.precio * cantidad;
                 total += subtotal;
                 
                 productosData.push({
-                    id_producto: item.id_producto,
+                    id_producto: productId,
                     nombre: producto.nombre,
-                    cantidad: item.cantidad,
+                    cantidad: cantidad,
                     precio_unitario: producto.precio,
                     subtotal,
                     categoria: producto.categoria,
-                    horario: producto.horario
+                    horario: producto.horario,
+                    descripcion: producto.descripcion
                 });
+            }
+
+            // Agregar cargo express si aplica
+            if (tipo_pedido === 'express') {
+                total += 1.00;
             }
 
             // Verificar cafetería
@@ -212,9 +233,16 @@ const createOrder = async (req, res) => {
             pedidoId = generateId();
             const tiempoEstimado = calcularTiempoEstimado(productosData);
             
+            // Determinar nombre del usuario
+            const nombreUsuario = usuario_info?.nombre || 
+                                (req.user?.nombre) || 
+                                (req.user?.email) || 
+                                'Invitado';
+            
             pedidoData = {
                 id_pedido: pedidoId,
                 id_usuario: userId,
+                usuario_nombre: nombreUsuario,
                 id_cafeteria,
                 estado: 'Pendiente',
                 total,
@@ -225,7 +253,8 @@ const createOrder = async (req, res) => {
                 fecha_estimada: new Date(Date.now() + (tiempoEstimado * 60000)),
                 tiempo_estimado: tiempoEstimado,
                 items_count: productosData.length,
-                cafeteria_nombre: cafeteriaDoc.data().nombre
+                cafeteria_nombre: cafeteriaDoc.data().nombre,
+                cantidad_total: productosData.reduce((sum, item) => sum + item.cantidad, 0)
             };
 
             const pedidoRef = db.collection('pedidos').doc(pedidoId);
@@ -245,8 +274,8 @@ const createOrder = async (req, res) => {
             productosData.forEach(item => {
                 const productoRef = db.collection('productos').doc(item.id_producto);
                 transaction.update(productoRef, {
-                    ventas_totales: db.FieldValue.increment(item.cantidad),
-                    pedidos_count: db.FieldValue.increment(1),
+                    ventas_totales: admin.firestore.FieldValue.increment(item.cantidad),
+                    pedidos_count: admin.firestore.FieldValue.increment(1),
                     ultima_venta: serverTimestamp()
                 });
             });
@@ -260,36 +289,33 @@ const createOrder = async (req, res) => {
         res.status(201).json(response);
 
     } catch (error) {
-        console.error('Error creando pedido:', error);
+        console.error('Error creando pedido directo:', error);
         const { response, statusCode } = errorResponse('Error creando el pedido', error);
         res.status(statusCode).json(response);
     }
 };
 
-// Obtener pedidos del usuario
+// Crear pedido directo (alias para compatibilidad)
+const createOrder = createDirectOrder;
+
+// Obtener pedidos del usuario - CORREGIDO PARA EVITAR ÍNDICE
 const getUserOrders = async (req, res) => {
     try {
         const userId = req.user.id;
         const { estado, limit = 20, page = 1 } = req.query;
         const db = getDB();
 
+        // Consulta sin orderBy para evitar índice
         let pedidosQuery = db.collection('pedidos')
-            .where('id_usuario', '==', userId)
-            .orderBy('fecha_pedido', 'desc');
+            .where('id_usuario', '==', userId);
 
-        if (estado) {
+        // Aplicar filtro de estado si se especifica
+        if (estado && estado !== 'todos' && estado !== '') {
             pedidosQuery = pedidosQuery.where('estado', '==', estado);
         }
 
-        // Aplicar paginación
-        const offset = (page - 1) * limit;
-        if (offset > 0) {
-            // Para paginación real necesitarías implementar cursor-based pagination
-            // Por simplicidad, limitamos los resultados
-            pedidosQuery = pedidosQuery.limit(parseInt(limit));
-        } else {
-            pedidosQuery = pedidosQuery.limit(parseInt(limit));
-        }
+        // Limitar resultados
+        pedidosQuery = pedidosQuery.limit(parseInt(limit));
 
         const pedidosSnapshot = await pedidosQuery.get();
         
@@ -311,6 +337,13 @@ const getUserOrders = async (req, res) => {
             
             pedidos.push(pedido);
         }
+
+        // Ordenar en memoria por fecha (más recientes primero)
+        pedidos.sort((a, b) => {
+            const fechaA = a.fecha_pedido || new Date(0);
+            const fechaB = b.fecha_pedido || new Date(0);
+            return fechaB.getTime() - fechaA.getTime();
+        });
 
         const { response } = successResponse('Pedidos obtenidos correctamente', {
             pedidos,
@@ -438,6 +471,7 @@ const calcularTiempoEstimado = (items) => {
         // Tiempo adicional por categoría
         switch (item.categoria) {
             case 'Platos Principales':
+            case 'Almuerzos':
                 tiempoBase += 8;
                 break;
             case 'Bebidas Calientes':
@@ -445,6 +479,15 @@ const calcularTiempoEstimado = (items) => {
                 break;
             case 'Postres':
                 tiempoBase += 5;
+                break;
+            case 'Sandwiches':
+                tiempoBase += 6;
+                break;
+            case 'Desayunos':
+                tiempoBase += 7;
+                break;
+            case 'Cenas':
+                tiempoBase += 10;
                 break;
             default:
                 tiempoBase += 2;
@@ -456,6 +499,7 @@ const calcularTiempoEstimado = (items) => {
 
 module.exports = {
     createOrderFromCart,
+    createDirectOrder,
     createOrder,
     getUserOrders,
     getOrderById,

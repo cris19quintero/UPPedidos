@@ -1,4 +1,4 @@
-// src/components/CartModal.jsx
+// src/components/CartModal.jsx - PRECIOS CORREGIDOS
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
@@ -23,21 +23,24 @@ function CartModal({ isOpen, onClose }) {
 
     setIsProcessing(true);
     try {
+      console.log('Iniciando checkout con datos:', orderOptions);
+      console.log('Carrito actual:', cart);
+      
       const newOrder = await createOrderFromCart({
         ...orderOptions,
         usuario_info: user || { nombre: 'Invitado' }
       });
 
-      alert(`¡Pedido #${newOrder.numero_orden} realizado con éxito!
+      alert(`¡Pedido realizado con éxito!
 📧 Confirmación enviada.
-📍 Retira en ${newOrder.cafeteria_info.nombre}.
+📍 Retira en la cafetería.
 ⏱️ Tiempo estimado: 15-20 min`);
 
       onClose();
       navigate('/pedidos');
     } catch (error) {
-      console.error(error);
-      alert('Error al procesar el pedido');
+      console.error('Error en checkout:', error);
+      alert(`Error al procesar el pedido: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -53,7 +56,7 @@ function CartModal({ isOpen, onClose }) {
 
   const getEstimatedTime = () => {
     if (cart.length === 0) return 0;
-    const totalTime = cart.reduce((sum, item) => sum + (item.tiempo_preparacion || 10) * (item.quantity || 1), 0);
+    const totalTime = cart.reduce((sum, item) => sum + (item.tiempo_preparacion || 10) * (item.cantidad || 1), 0);
     return Math.max(10, Math.min(totalTime, 30));
   };
 
@@ -77,13 +80,13 @@ function CartModal({ isOpen, onClose }) {
             <>
               <div className="cart-items">
                 {cart.map((item, index) => (
-                  <div key={item.id_carrito || index} className="cart-item">
+                  <div key={item.id_item || item.id_carrito || index} className="cart-item">
                     <div className="cart-item-info">
                       <div className="cart-item-name">{item.nombre}</div>
                       <div className="cart-item-price">
-                        ${(item.precio || 0).toFixed(2)}
-                        {item.quantity && item.quantity > 1 && 
-                          ` x ${item.quantity} = ${((item.precio || 0) * item.quantity).toFixed(2)}`
+                        ${(item.precio_unitario || item.precio || 0).toFixed(2)}
+                        {item.cantidad && item.cantidad > 1 && 
+                          ` x ${item.cantidad} = $${((item.precio_unitario || item.precio || 0) * item.cantidad).toFixed(2)}`
                         }
                       </div>
                       {item.descripcion && <div className="cart-item-description">{item.descripcion}</div>}
@@ -94,7 +97,7 @@ function CartModal({ isOpen, onClose }) {
                     </div>
                     <button 
                       className="cart-item-remove"
-                      onClick={() => removeFromCart(index)}
+                      onClick={() => removeFromCart(item.id_producto)}
                       disabled={isProcessing}
                     >
                       🗑️
@@ -106,7 +109,7 @@ function CartModal({ isOpen, onClose }) {
               <div className="cart-total">
                 <div className="cart-summary">
                   <p><strong>Total de items:</strong> {cart.length}</p>
-                  <p><strong>Cantidad total:</strong> {cart.reduce((sum, item) => sum + (item.quantity || 1), 0)}</p>
+                  <p><strong>Cantidad total:</strong> {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}</p>
                   {orderOptions.tipo_pedido === 'express' && <p><strong>Cargo express:</strong> $1.00</p>}
                   <p className="total-price"><strong>Total a pagar: ${(getCartTotal() + (orderOptions.tipo_pedido === 'express' ? 1 : 0)).toFixed(2)}</strong></p>
                   <p className="estimated-time"><strong>⏱️ Tiempo estimado: {estimatedTime} minutos</strong></p>
@@ -127,7 +130,7 @@ function CartModal({ isOpen, onClose }) {
                   <label htmlFor="tipo_pedido">Tipo de pedido:</label>
                   <select id="tipo_pedido" name="tipo_pedido" value={orderOptions.tipo_pedido} onChange={handleInputChange} disabled={isProcessing}>
                     <option value="normal">🍽️ Normal</option>
-                    <option value="express">⚡Para llevar (+$0.50)</option>
+                    <option value="express">⚡Para llevar (+$1.00)</option>
                   </select>
                 </div>
 

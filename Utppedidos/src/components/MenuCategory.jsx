@@ -1,4 +1,4 @@
-// src/components/MenuCategory.jsx - SOLO API BACKEND
+// src/components/MenuCategory.jsx - CORREGIDO PARA PRODUCTOS
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 
@@ -20,18 +20,18 @@ function MenuCategory({ categoria, items, cafeteriaId, isOpen = true }) {
       return;
     }
 
-    const itemKey = `${cafeteriaId}-${item.id || item.id_producto}`;
+    // 🔥 CAMBIO: Usar id_producto consistentemente
+    const itemKey = `${cafeteriaId}-${item.id_producto || item.id}`;
     
     if (addingItems[itemKey]) return;
     
     setAddingItems(prev => ({ ...prev, [itemKey]: true }));
     
     try {
-      // Preparar datos del producto para el backend
+      // 🔥 CAMBIO: Preparar datos del producto para el backend
       const productData = {
-        id: item.id || item.id_producto,
-        id_producto: item.id || item.id_producto,
-        quantity: 1
+        id_producto: item.id_producto || item.id, // Usar id_producto
+        cantidad: 1 // Cambiar quantity por cantidad para consistencia con backend
       };
       
       await addToCart(productData);
@@ -76,13 +76,14 @@ function MenuCategory({ categoria, items, cafeteriaId, isOpen = true }) {
         <h3>{categoria}</h3>
         <div className="menu-items">
           {items.map((item, index) => {
-            const itemKey = `${cafeteriaId}-${item.id || item.id_producto}`;
+            // 🔥 CAMBIO: Usar id_producto consistentemente
+            const itemKey = `${cafeteriaId}-${item.id_producto || item.id}`;
             const isAdding = addingItems[itemKey];
             const available = (item.activo !== false && item.disponible !== false) && isOpen;
             
             return (
               <div 
-                key={item.id || item.id_producto || index} 
+                key={item.id_producto || item.id || index} 
                 className={`menu-item ${!available ? 'unavailable' : ''}`}
               >
                 <div className="menu-item-image">

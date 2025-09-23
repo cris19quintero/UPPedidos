@@ -1,4 +1,4 @@
-// ===== routes/pedidos.js - MIGRADO A FIREBASE =====
+// ===== routes/pedidos.js - CÓDIGO COMPLETO CORREGIDO =====
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
@@ -8,17 +8,40 @@ const { generalLimiter } = require('../middleware/rateLimiter');
 // Aplicar rate limiting
 router.use(generalLimiter);
 
+// MIDDLEWARE DE AUTENTICACIÓN OPCIONAL (para permitir invitados)
+const optionalAuth = (req, res, next) => {
+    const token = req.header('x-auth-token') || 
+                  req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (token) {
+        // Si hay token, usar middleware de autenticación normal
+        auth(req, res, (err) => {
+            if (err) {
+                // Si hay error en auth, continuar como invitado
+                req.user = null;
+                next();
+            } else {
+                next();
+            }
+        });
+    } else {
+        // Si no hay token, continuar como invitado
+        req.user = null;
+        next();
+    }
+};
+
 // ========== RUTAS DE PEDIDOS DE USUARIO ==========
 
+// @route   POST /api/pedidos
+// @desc    Crear pedido directo (PERMITE INVITADOS) - PARA CARTMODAL
+// @access  Public/Private (opcional)
+router.post('/', optionalAuth, orderController.createDirectOrder);
+
 // @route   POST /api/pedidos/from-cart
-// @desc    Crear pedido desde carrito
+// @desc    Crear pedido desde carrito (REQUIERE AUTH)
 // @access  Private
 router.post('/from-cart', auth, orderController.createOrderFromCart);
-
-// @route   POST /api/pedidos
-// @desc    Crear pedido directo (sin carrito)
-// @access  Private
-router.post('/', auth, orderController.createOrder);
 
 // @route   GET /api/pedidos
 // @desc    Obtener pedidos del usuario
@@ -54,21 +77,20 @@ router.get('/admin/all', [auth, adminAuth], async (req, res) => {
         const { getDB } = require('../config/database');
         const db = getDB();
 
-        // Query base
+        // Query base sin orderBy para evitar índice
         let pedidosQuery = db.collection('pedidos');
 
         // Aplicar filtros
-        if (estado) {
+        if (estado && estado !== 'todos') {
             pedidosQuery = pedidosQuery.where('estado', '==', estado);
         }
 
-        if (cafeteria) {
+        if (cafeteria && cafeteria !== 'todas') {
             pedidosQuery = pedidosQuery.where('id_cafeteria', '==', cafeteria);
         }
 
         // Ejecutar query
         const pedidosSnapshot = await pedidosQuery
-            .orderBy('fecha_pedido', 'desc')
             .limit(parseInt(limit))
             .get();
 
@@ -95,13 +117,14 @@ router.get('/admin/all', [auth, adminAuth], async (req, res) => {
                 const matchesSearch = 
                     pedido.id.toLowerCase().includes(searchLower) ||
                     pedido.cafeteria_nombre?.toLowerCase().includes(searchLower) ||
+                    pedido.usuario_nombre?.toLowerCase().includes(searchLower) ||
                     pedido.usuario_email?.toLowerCase().includes(searchLower);
                 
                 if (!matchesSearch) continue;
             }
             
-            // Obtener información del usuario
-            if (pedido.id_usuario) {
+            // Obtener información del usuario (solo si no es invitado)
+            if (pedido.id_usuario && pedido.id_usuario !== 'guest') {
                 try {
                     const usuarioDoc = await db.collection('usuarios').doc(pedido.id_usuario).get();
                     if (usuarioDoc.exists) {
@@ -115,6 +138,13 @@ router.get('/admin/all', [auth, adminAuth], async (req, res) => {
                 } catch (userError) {
                     console.error('Error obteniendo usuario:', userError);
                 }
+            } else if (pedido.id_usuario === 'guest') {
+                // Para usuarios invitados, usar el nombre del pedido
+                pedido.usuario_info = {
+                    nombre: pedido.usuario_nombre || 'Invitado',
+                    apellido: '',
+                    correo: 'Pedido de invitado'
+                };
             }
             
             // Convertir timestamps
@@ -128,7 +158,14 @@ router.get('/admin/all', [auth, adminAuth], async (req, res) => {
             pedidos.push(pedido);
         }
 
-        // Obtener total para paginación (simplificado)
+        // Ordenar en memoria por fecha (más recientes primero)
+        pedidos.sort((a, b) => {
+            const fechaA = a.fecha_pedido || new Date(0);
+            const fechaB = b.fecha_pedido || new Date(0);
+            return fechaB.getTime() - fechaA.getTime();
+        });
+
+        // Obtener total para paginación
         const totalSnapshot = await db.collection('pedidos').get();
         const total = totalSnapshot.size;
 
@@ -251,10 +288,8 @@ router.get('/admin/stats', [auth, adminAuth], async (req, res) => {
                 fechaInicio.setDate(fechaInicio.getDate() - 30);
         }
 
-        // Obtener pedidos del período
-        const pedidosSnapshot = await db.collection('pedidos')
-            .where('fecha_pedido', '>=', fechaInicio)
-            .get();
+        // Obtener pedidos del período (sin filtro de fecha para evitar índice)
+        const pedidosSnapshot = await db.collection('pedidos').get();
 
         let totalPedidos = 0;
         let pedidosPendientes = 0;
@@ -266,6 +301,13 @@ router.get('/admin/stats', [auth, adminAuth], async (req, res) => {
 
         pedidosSnapshot.docs.forEach(doc => {
             const pedido = doc.data();
+            
+            // Filtrar por fecha en memoria
+            if (pedido.fecha_pedido) {
+                const fechaPedido = pedido.fecha_pedido.toDate();
+                if (fechaPedido < fechaInicio) return;
+            }
+            
             totalPedidos++;
 
             switch (pedido.estado) {

@@ -1,4 +1,4 @@
-// src/services/apiService.js - VERSIÓN FINAL CON AXIOS
+// src/services/apiService.js - VERSIÓN COMPLETA CORREGIDA
 import backendApi from './backendApi';
 
 // ==================== CAFETERÍAS ====================
@@ -39,9 +39,11 @@ export const cafeteriaService = {
 
 // ==================== PRODUCTOS/MENÚ ====================
 export const menuService = {
-  // Obtener menú por cafetería - USANDO /menu/cafeteria
+  // Obtener menú por cafetería - CON DEBUG
   getByCafeteria: async (cafeteriaId, filters = {}) => {
     try {
+      console.log('🔍 MenuService - Iniciando llamada para cafetería:', cafeteriaId);
+      
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
         if (value && value !== '') {
@@ -51,10 +53,21 @@ export const menuService = {
       
       const queryString = params.toString();
       const url = `/menu/cafeteria/${cafeteriaId}${queryString ? `?${queryString}` : ''}`;
+      
+      console.log('🌐 MenuService - URL completa:', url);
+      console.log('🌐 MenuService - Base URL del backendApi:', backendApi.defaults.baseURL);
+      
       const response = await backendApi.get(url);
+      
+      console.log('✅ MenuService - Respuesta exitosa:', response);
+      console.log('📊 MenuService - Data:', response.data);
+      
       return response.data;
     } catch (error) {
-      console.error('Error obteniendo menú:', error);
+      console.error('❌ MenuService - Error completo:', error);
+      console.error('❌ MenuService - Error response:', error.response);
+      console.error('❌ MenuService - Error status:', error.response?.status);
+      console.error('❌ MenuService - Error data:', error.response?.data);
       throw error;
     }
   },
@@ -88,11 +101,11 @@ export const menuService = {
     }
   },
 
-  // Obtener categorías - USANDO /menu/categorias
+  // Obtener categorías - USANDO /menu/categorias (TYPO CORREGIDO)
   getCategories: async (cafeteriaId = null) => {
     try {
       const params = cafeteriaId ? `?cafeteria=${cafeteriaId}` : '';
-      const response = await backendApi.get(`/menu/categoriasy${params}`);
+      const response = await backendApi.get(`/menu/categorias${params}`);
       return response.data;
     } catch (error) {
       console.error('Error obteniendo categorías:', error);

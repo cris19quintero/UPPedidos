@@ -149,13 +149,13 @@ const getCafeteriaStats = async (req, res) => {
         const ticketPromedio = totalVentas > 0 ? ingresosTotales / totalVentas : 0;
 
         // Obtener productos populares
-        const productosSnapshot = await db.collection('productos')
+        const productosSnapshot = await db.collection('categorias')
             .where('id_cafeteria', '==', id)
             .orderBy('ventas_totales', 'desc')
             .limit(5)
             .get();
 
-        const productosPopulares = productosSnapshot.docs.map(doc => {
+        const categoriasPopulares = categoriasSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 nombre: data.nombre,
@@ -172,7 +172,7 @@ const getCafeteriaStats = async (req, res) => {
                 ingresos_totales: ingresosTotales,
                 ticket_promedio: ticketPromedio
             },
-            productos_populares: productosPopulares,
+            categorias_populares: categoriasPopulares,
             cafeteria: {
                 nombre: cafeteriaDoc.data().nombre
             }

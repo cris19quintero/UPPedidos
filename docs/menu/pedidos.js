@@ -546,7 +546,7 @@ window.onload = function() {
 
 // Función para cargar productos de ejemplo (solo para demostración)
 function loadSampleProducts() {
-    const productos = [
+    const categoria = [
         { name: "Almuerzo - Opción 1", price: 8.50, cafeteria: "Cafetería #3", image: "almuerzo-opcion-1.jpg" },
         { name: "Cena - Opción 1", price: 7.50, cafeteria: "Cafetería #3", image: "cena-opcion-1.jpg" },
         { name: "Desayuno - Opción 3", price: 5.00, cafeteria: "Cafetería #1", image: "desayuno-opcion-3.jpg" }
@@ -554,7 +554,7 @@ function loadSampleProducts() {
     const productContainer = document.getElementById('product-container');
     if (productContainer) {
         productContainer.innerHTML = '';
-        productos.forEach(producto => {
+        categoria.forEach(producto => {
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
             productCard.innerHTML = `

@@ -217,7 +217,6 @@ app.get('/', (req, res) => {
       'POST /api/auth/* - Authentication',
       'GET /api/users/* - User management',
       'GET /api/cafeterias/* - Cafeteria management',
-      'GET /api/productos/* - Product management',
       'GET /api/pedidos/* - Order management',
       'GET /api/carritos/* - Cart management'
     ]
